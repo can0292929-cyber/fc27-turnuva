@@ -2,677 +2,2749 @@
 <html lang="tr" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EA Sports FC 27 Turnuva Takım Seçimi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>EA Sports FC 27 — Gizli Takım Seçim ve Turnuva Dağıtım Sistemi</title>
   <style>
-    :root[data-theme="dark"] {
-      --bg: #0b0f19; --surface: #151c2c; --surface-2: #1e293b; --border: #2e3c56;
-      --text: #f1f5f9; --text-muted: #94a3b8; --primary: #10b981; --primary-hover: #059669;
-      --accent: #3b82f6; --danger: #ef4444; --warning: #f59e0b; --card-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    :root,
+    [data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #131b2e;
+      --bg-card: #182238;
+      --bg-card-hover: #1f2c48;
+      --bg-elevated: #22304f;
+      --bg-input: #0f1626;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-color: #263554;
+      --border-highlight: #3b82f6;
+      --accent-green: #10b981;
+      --accent-green-hover: #059669;
+      --accent-green-soft: rgba(16, 185, 129, 0.14);
+      --accent-blue: #3b82f6;
+      --accent-blue-hover: #2563eb;
+      --accent-blue-soft: rgba(59, 130, 246, 0.15);
+      --accent-gold: #f59e0b;
+      --accent-gold-soft: rgba(245, 158, 11, 0.15);
+      --accent-purple: #8b5cf6;
+      --accent-purple-soft: rgba(139, 92, 246, 0.15);
+      --accent-red: #ef4444;
+      --accent-red-hover: #dc2626;
+      --accent-red-soft: rgba(239, 68, 68, 0.15);
+      --shadow-lg: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+      --bottom-bar-bg: rgba(19, 27, 46, 0.96);
     }
-    :root[data-theme="light"] {
-      --bg: #f1f5f9; --surface: #ffffff; --surface-2: #e2e8f0; --border: #cbd5e1;
-      --text: #0f172a; --text-muted: #475569; --primary: #059669; --primary-hover: #047857;
-      --accent: #2563eb; --danger: #dc2626; --warning: #d97706; --card-shadow: 0 4px 16px rgba(15,23,42,0.08);
+
+    [data-theme="light"] {
+      --bg-primary: #f1f5f9;
+      --bg-secondary: #e2e8f0;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f8fafc;
+      --bg-elevated: #f1f5f9;
+      --bg-input: #f8fafc;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --border-color: #cbd5e1;
+      --border-highlight: #2563eb;
+      --accent-green: #059669;
+      --accent-green-hover: #047857;
+      --accent-green-soft: rgba(5, 150, 105, 0.12);
+      --accent-blue: #2563eb;
+      --accent-blue-hover: #1d4ed8;
+      --accent-blue-soft: rgba(37, 99, 235, 0.1);
+      --accent-gold: #d97706;
+      --accent-gold-soft: rgba(217, 119, 6, 0.12);
+      --accent-purple: #7c3aed;
+      --accent-purple-soft: rgba(124, 58, 237, 0.1);
+      --accent-red: #dc2626;
+      --accent-red-hover: #b91c1c;
+      --accent-red-soft: rgba(220, 38, 38, 0.1);
+      --shadow-lg: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+      --bottom-bar-bg: rgba(255, 255, 255, 0.96);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: var(--bg); color: var(--text); line-height: 1.5; padding-bottom: 110px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-bottom: 110px;
+      transition: background-color 0.2s ease, color 0.2s ease;
     }
-    .container { max-width: 920px; margin: 0 auto; padding: 16px; }
-    header {
-      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 16px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-      box-shadow: var(--card-shadow); margin-bottom: 16px;
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 16px;
     }
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .brand-badge {
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      color: #fff; font-weight: 800; padding: 8px 12px; border-radius: 10px; font-size: 1.1rem;
+
+    /* Üst Başlık */
+    .app-header {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
     }
-    .brand-title h1 { font-size: 1.2rem; font-weight: 700; }
-    .brand-title p { font-size: 0.85rem; color: var(--text-muted); }
-    .header-right { display: flex; align-items: center; gap: 10px; }
-    .phase-pill { font-size: 0.8rem; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
-    .phase-lobby { background: rgba(245,158,11,0.18); color: var(--warning); border: 1px solid var(--warning); }
-    .phase-pick { background: rgba(16,185,129,0.18); color: var(--primary); border: 1px solid var(--primary); }
-    .phase-revealed { background: rgba(59,130,246,0.18); color: var(--accent); border: 1px solid var(--accent); }
-    button { cursor: pointer; font-family: inherit; font-weight: 600; border: none; border-radius: 10px; padding: 10px 16px; font-size: 0.92rem; transition: all 0.15s; }
-    button:disabled { opacity: 0.45; cursor: not-allowed; }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
-    .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
-    .btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid var(--danger); }
-    .btn-danger:hover:not(:disabled) { background: var(--danger); color: #fff; }
-    .btn-sm { padding: 6px 11px; font-size: 0.8rem; border-radius: 8px; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; }
-    .tab-btn { flex: 1; text-align: center; background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); padding: 11px 14px; border-radius: 10px; white-space: nowrap; }
-    .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-    #alert-box { display: none; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-weight: 600; font-size: 0.92rem; }
-    .alert-error { background: rgba(239,68,68,0.16); color: var(--danger); border: 1px solid var(--danger); }
-    .alert-success { background: rgba(16,185,129,0.16); color: var(--primary); border: 1px solid var(--primary); }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; box-shadow: var(--card-shadow); }
-    .card h2 { font-size: 1.1rem; margin-bottom: 6px; }
-    .card p.desc { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 14px; }
-    .group-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-    .group-card-btn { padding: 14px; border-radius: 12px; background: var(--surface-2); border: 2px solid var(--border); text-align: left; color: var(--text); }
-    .group-card-btn.selected { border-color: var(--primary); background: rgba(16,185,129,0.1); }
-    .group-card-btn strong { display: block; font-size: 1.05rem; }
-    .name-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-    .name-btn { display: flex; flex-direction: column; align-items: flex-start; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); }
-    .name-btn .order-tag { font-size: 0.75rem; color: var(--text-muted); }
-    .name-btn .player-name { font-size: 1rem; font-weight: 700; }
-    .name-btn .taken-tag { font-size: 0.75rem; color: var(--warning); margin-top: 4px; }
-    .me-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; background: rgba(16,185,129,0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
-    .teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
-    .team-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--surface-2); border: 2px solid var(--border); border-radius: 10px; cursor: pointer; }
-    .team-item.selected { border-color: var(--primary); background: rgba(16,185,129,0.14); }
-    .pick-badge { background: var(--primary); color: #fff; font-size: 0.78rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
-    .sealed-box { text-align: center; padding: 20px; background: var(--surface-2); border: 1px dashed var(--border); border-radius: 12px; }
-    .groups-status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-    .status-list { list-style: none; }
-    .status-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
-    .status-row:last-child { border-bottom: none; }
-    .badge { font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
-    .badge-ok { background: rgba(16,185,129,0.18); color: var(--primary); }
-    .badge-wait { background: rgba(148,163,184,0.18); color: var(--text-muted); }
-    .badge-warn { background: rgba(245,158,11,0.18); color: var(--warning); }
-    .result-row { padding: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; }
-    .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .assigned-team { font-weight: 800; color: var(--primary); font-size: 1.02rem; }
-    .picks-chain { display: flex; flex-wrap: wrap; gap: 6px; font-size: 0.8rem; }
-    .pick-chip { padding: 2px 8px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border); color: var(--text-muted); }
-    .pick-chip.matched { border-color: var(--primary); color: var(--primary); font-weight: 700; }
-    .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 2px solid var(--border); padding: 12px 16px; box-shadow: 0 -6px 20px rgba(0,0,0,0.3); z-index: 100; display: none; }
-    .bottom-bar-inner { max-width: 920px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    textarea { width: 100%; min-height: 180px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-family: inherit; font-size: 0.88rem; resize: vertical; }
-    .admin-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+      color: #fff;
+      font-weight: 800;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: -0.5px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .brand-title h1 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-title p {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .phase-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .phase-prep {
+      background: var(--accent-gold-soft);
+      color: var(--accent-gold);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .phase-pick {
+      background: var(--accent-blue-soft);
+      color: var(--accent-blue);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .phase-reveal {
+      background: var(--accent-green-soft);
+      color: var(--accent-green);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      display: inline-block;
+    }
+
+    .icon-btn {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--border-highlight);
+      background: var(--bg-card-hover);
+    }
+
+    /* Sekmeler */
+    .tabs-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .tab-btn {
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-card-hover);
+    }
+
+    .tab-btn.active {
+      background: var(--accent-blue);
+      color: #ffffff;
+      border-color: var(--accent-blue);
+    }
+
+    .tab-btn .badge-count {
+      background: rgba(255, 255, 255, 0.2);
+      color: inherit;
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+    }
+
+    /* Kartlar ve Düzen */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .app-header {
+        padding: 14px;
+      }
+    }
+
+    /* Aktif Oyuncu Kimlik Kartı */
+    .identity-banner {
+      background: linear-gradient(135deg, var(--accent-blue-soft), var(--accent-green-soft));
+      border: 1px solid var(--border-highlight);
+      border-radius: 14px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .identity-details {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .identity-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--accent-blue);
+      color: #fff;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .identity-text strong {
+      font-size: 1rem;
+      display: block;
+    }
+
+    .identity-text span {
+      font-size: 0.83rem;
+      color: var(--text-secondary);
+    }
+
+    /* Butonlar */
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-blue-hover);
+    }
+
+    .btn-success {
+      background: var(--accent-green);
+      color: #fff;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: var(--accent-green-hover);
+    }
+
+    .btn-danger {
+      background: var(--accent-red);
+      color: #fff;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: var(--accent-red-hover);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-outline:hover:not(:disabled) {
+      border-color: var(--border-highlight);
+      background: var(--bg-elevated);
+    }
+
+    .btn-sm {
+      padding: 6px 11px;
+      font-size: 0.78rem;
+      border-radius: 8px;
+    }
+
+    /* Kategori Seçim Kutuları */
+    .category-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .category-card {
+      background: var(--bg-elevated);
+      border: 2px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px;
+      cursor: pointer;
+      text-align: left;
+      color: var(--text-primary);
+      transition: all 0.15s ease;
+    }
+
+    .category-card:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .category-card.selected {
+      border-color: var(--accent-blue);
+      background: var(--accent-blue-soft);
+    }
+
+    .category-card .cat-stars {
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .category-card .cat-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    /* İsim Seçim Listesi */
+    .player-select-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 10px;
+    }
+
+    .player-name-btn {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 14px;
+      text-align: left;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .player-name-btn:hover:not(:disabled) {
+      border-color: var(--accent-green);
+      background: var(--bg-card-hover);
+      transform: translateY(-1px);
+    }
+
+    .player-name-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: var(--bg-input);
+    }
+
+    .player-name-btn .p-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .player-name-btn .p-sub {
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+    }
+
+    .order-pill {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    /* Takım Seçim Izgarası */
+    .teams-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .team-card {
+      background: var(--bg-elevated);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-align: left;
+      transition: all 0.14s ease;
+      user-select: none;
+    }
+
+    .team-card:hover {
+      border-color: var(--accent-blue);
+      background: var(--bg-card-hover);
+    }
+
+    .team-card.selected {
+      border-color: var(--accent-green);
+      background: var(--accent-green-soft);
+    }
+
+    .team-rank-badge {
+      min-width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .team-card.selected .team-rank-badge {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+      color: #ffffff;
+    }
+
+    /* Seçilen Tercih Sırası Özeti */
+    .selected-order-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .selected-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .selected-chip {
+      background: var(--accent-blue-soft);
+      border: 1px solid var(--accent-blue);
+      color: var(--text-primary);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .selected-chip .chip-num {
+      background: var(--accent-blue);
+      color: #fff;
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    /* Mühürlü Tercih Kutusu */
+    .sealed-box {
+      background: var(--bg-input);
+      border: 1px dashed var(--accent-green);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .sealed-icon {
+      font-size: 2rem;
+      margin-bottom: 6px;
+    }
+
+    .sealed-list {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 440px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: left;
+    }
+
+    .sealed-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 9px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    /* Oyuncu Durum Listesi */
+    .status-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .status-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-badges {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .pill-success {
+      background: var(--accent-green-soft);
+      color: var(--accent-green);
+    }
+
+    .pill-warn {
+      background: var(--accent-gold-soft);
+      color: var(--accent-gold);
+    }
+
+    .pill-muted {
+      background: var(--bg-input);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    .pill-blue {
+      background: var(--accent-blue-soft);
+      color: var(--accent-blue);
+    }
+
+    /* Sabit Alt Çubuk */
+    .sticky-bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bottom-bar-bg);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border-color);
+      padding: 12px 16px;
+      z-index: 90;
+      box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    .sticky-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .sticky-counter {
+      font-weight: 800;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Sonuçlar Kartları */
+    .result-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    .result-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .assigned-team-badge {
+      background: var(--accent-green-soft);
+      border: 1px solid var(--accent-green);
+      color: var(--accent-green);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 0.92rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .no-team-badge {
+      background: var(--accent-red-soft);
+      border: 1px solid var(--accent-red);
+      color: var(--accent-red);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+
+    .pref-breakdown {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pref-item {
+      padding: 4px 9px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      background: var(--bg-input);
+      color: var(--text-secondary);
+    }
+
+    .pref-item.assigned {
+      background: var(--accent-green-soft);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      font-weight: 800;
+    }
+
+    .pref-item.taken {
+      text-decoration: line-through;
+      opacity: 0.75;
+    }
+
+    /* Yönetim Sekmesi Form Elemanları */
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text-primary);
+    }
+
+    .form-hint {
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    textarea.pool-textarea {
+      width: 100%;
+      min-height: 220px;
+      background: var(--bg-input);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 0.86rem;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    textarea.players-textarea {
+      width: 100%;
+      min-height: 120px;
+      background: var(--bg-input);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 0.86rem;
+      resize: vertical;
+      line-height: 1.45;
+      margin-bottom: 12px;
+    }
+
+    textarea:focus,
+    input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    textarea:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .admin-actions-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    /* Bildirim (Toast) ve Modal */
+    .toast-container {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 360px;
+      width: calc(100% - 32px);
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border-left: 4px solid var(--accent-blue);
+      border-top: 1px solid var(--border-color);
+      border-right: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 14px;
+      border-radius: 10px;
+      box-shadow: var(--shadow-lg);
+      font-size: 0.86rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .toast.error {
+      border-left-color: var(--accent-red);
+    }
+
+    .toast.success {
+      border-left-color: var(--accent-green);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 180;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      max-width: 440px;
+      width: 100%;
+      padding: 20px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .modal-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .modal-body {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      margin-top: 8px;
+    }
+
+    .footer-note {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 0.78rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div class="brand">
-        <div class="brand-badge">FC 27</div>
-        <div class="brand-title">
-          <h1>Turnuva Takım Seçimi</h1>
-          <p>Gizli Tercih & Sıralı Dağıtım</p>
-        </div>
-      </div>
-      <div class="header-right">
-        <span id="phase-badge" class="phase-pill phase-lobby">Hazırlık</span>
-        <button id="theme-toggle" class="btn-secondary btn-sm">☀️ / 🌙</button>
-      </div>
-    </header>
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
-    <div id="alert-box"></div>
-
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="main">Turnuva & Seçim</button>
-      <button class="tab-btn" data-tab="results" id="tab-btn-results">Sonuçlar</button>
-      <button class="tab-btn" data-tab="admin" id="tab-btn-admin" style="display: none;">Yönetim</button>
-    </div>
-
-    <!-- ANA SEKME -->
-    <div id="tab-main">
-      <div id="claim-section" class="card" style="display: none;">
-        <h2>1. Grubunu ve İsmini Seç</h2>
-        <p class="desc">Kendi grubunu seçtikten sonra adına tıkla. Listedeki sıra numaran kadar takım tercih edeceksin.</p>
-        <div class="group-selector">
-          <button type="button" class="group-card-btn selected" data-group="5star">
-            <strong>5★ Grubu</strong>
-            <span id="label-players-5star">Yükleniyor...</span>
-          </button>
-          <button type="button" class="group-card-btn" data-group="4.5star">
-            <strong>4.5★ Grubu</strong>
-            <span id="label-players-4.5star">Yükleniyor...</span>
-          </button>
-        </div>
-        <div id="name-buttons-container" class="name-grid"></div>
-      </div>
-
-      <div id="me-section" class="me-banner" style="display: none;">
-        <div>
-          <strong id="me-title"></strong>
-          <span id="me-subtitle" style="display: block; font-size: 0.85rem; color: var(--text-muted);"></span>
-        </div>
-        <button id="unclaim-btn" class="btn-danger btn-sm">Ben değilim</button>
-      </div>
-
-      <div id="pick-section" class="card" style="display: none;">
-        <h2 id="pick-card-title">Takım Tercihlerin</h2>
-        <p class="desc" id="pick-card-desc"></p>
-        <div id="sealed-view" class="sealed-box" style="display: none;">
-          <h3>🔒 Tercihlerin Mühürlendi</h3>
-          <p class="desc">Açıklanana kadar kimse tercihlerini göremez.</p>
-          <div style="display: flex; justify-content: center; gap: 10px; margin-top: 14px;">
-            <button id="toggle-show-picks-btn" class="btn-secondary">Tercihlerimi Göster</button>
-            <button id="edit-picks-btn" class="btn-primary">Tercihlerimi Değiştir</button>
-          </div>
-          <ol id="my-sealed-picks-list" style="display: none; margin-top: 14px; text-align: left; max-width: 320px; margin-inline: auto;"></ol>
-        </div>
-        <div id="picking-view" style="display: none;">
-          <div id="teams-grid" class="teams-grid"></div>
-        </div>
-      </div>
-
-      <div class="groups-status-grid">
-        <div class="card">
-          <h2>5★ Grubu Durumu</h2>
-          <ul id="status-list-5star" class="status-list"></ul>
-        </div>
-        <div class="card">
-          <h2>4.5★ Grubu Durumu</h2>
-          <ul id="status-list-4.5star" class="status-list"></ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- SONUÇLAR SEKMESİ -->
-    <div id="tab-results" style="display: none;">
-      <div id="results-not-ready" class="card">
-        <h2>Sonuçlar Henüz Açıklanmadı</h2>
-        <p class="desc">Organizatör seçimleri açıkladığında tüm dağıtım burada listelenecektir.</p>
-      </div>
-      <div id="results-ready" class="groups-status-grid" style="display: none;">
-        <div class="card">
-          <h2>5★ Grubu Sonuçları</h2>
-          <div id="results-list-5star"></div>
-        </div>
-        <div class="card">
-          <h2>4.5★ Grubu Sonuçları</h2>
-          <div id="results-list-4.5star"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- YÖNETİM SEKMESİ -->
-    <div id="tab-admin" style="display: none;">
-      <div class="card">
-        <h2>Turnuva Kontrolü</h2>
-        <p class="desc" id="admin-summary-text"></p>
-        <div class="admin-actions">
-          <button id="admin-start-btn" class="btn-primary">Seçimi Başlat</button>
-          <button id="admin-reveal-btn" class="btn-primary">Seçimleri Açıkla</button>
-          <button id="admin-reset-btn" class="btn-danger">Baştan Başla</button>
-        </div>
-      </div>
-
-      <!-- DİNAMİK OYUNCU YÖNETİMİ ALANI -->
-      <div class="card">
-        <h2>Oyuncu Listelerini Düzenle (Her Satıra 1 Oyuncu)</h2>
-        <p class="desc">Sıralama yukarıdan aşağıya 1., 2., 3. tercih sırasını belirler. Sadece hazırlıkta değiştirilebilir.</p>
-        <div class="groups-status-grid">
-          <div>
-            <h3 style="font-size: 0.95rem; margin-bottom: 6px;">5★ Oyuncuları</h3>
-            <textarea id="players-textarea-5star"></textarea>
-          </div>
-          <div>
-            <h3 style="font-size: 0.95rem; margin-bottom: 6px;">4.5★ Oyuncuları</h3>
-            <textarea id="players-textarea-4.5star"></textarea>
-          </div>
-        </div>
-        <div class="admin-actions">
-          <button id="admin-save-players-btn" class="btn-secondary">Oyuncu Listesini Kaydet</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>İsim Serbest Bırak</h2>
-        <div class="groups-status-grid">
-          <ul id="admin-players-5star" class="status-list"></ul>
-          <ul id="admin-players-4.5star" class="status-list"></ul>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Takım Havuzları (Her Satıra 1 Takım)</h2>
-        <div class="groups-status-grid">
-          <div>
-            <h3 style="font-size: 0.95rem; margin-bottom: 6px;">5★ Havuzu</h3>
-            <textarea id="pool-textarea-5star"></textarea>
-          </div>
-          <div>
-            <h3 style="font-size: 0.95rem; margin-bottom: 6px;">4.5★ Havuzu</h3>
-            <textarea id="pool-textarea-4.5star"></textarea>
-          </div>
-        </div>
-        <div class="admin-actions">
-          <button id="admin-save-pools-btn" class="btn-secondary">Takım Havuzlarını Kaydet</button>
-        </div>
+  <!-- Onay Modalı (Seçimleri Açıkla vb. için) -->
+  <div id="confirmModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div id="confirmModalTitle" class="modal-title">Onay Gerekiyor</div>
+      <div id="confirmModalBody" class="modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" id="confirmCancelBtn" class="btn btn-outline btn-sm">Vazgeç</button>
+        <button type="button" id="confirmApproveBtn" class="btn btn-primary btn-sm">Evet, Devam Et</button>
       </div>
     </div>
   </div>
 
-  <!-- Sabit Alt Çubuk -->
-  <div id="bottom-bar" class="bottom-bar">
-    <div class="bottom-bar-inner">
+  <!-- Yönetici Anahtarı Giriş Modalı -->
+  <div id="adminKeyModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-title">Organizatör Girişi</div>
+      <div class="modal-body">
+        Sunucu konsolunda yazan yönetici anahtarını (<code>ADMIN_KEY</code>) girin veya sayfayı <code>?admin=ANAHTAR</code> adresiyle açın:
+        <input type="password" id="adminKeyInput" class="input-field" placeholder="Yönetici anahtarı..." autocomplete="off" />
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="adminModalCancelBtn" class="btn btn-outline btn-sm">Kapat</button>
+        <button type="button" id="adminModalSaveBtn" class="btn btn-primary btn-sm">Giriş Yap</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Üst Başlık -->
+    <header class="app-header">
+      <div class="brand-wrap">
+        <div class="brand-logo">FC27</div>
+        <div class="brand-title">
+          <h1>EA Sports FC 27 Turnuvası</h1>
+          <p id="syncSubtitle">Gizli Takım Tercih &amp; Sıralı Dağıtım Sistemi</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <span id="phaseBadge" class="phase-badge phase-prep">
+          <span class="pulse-dot"></span>
+          <span id="phaseText">Hazırlık (Lobi)</span>
+        </span>
+        <button type="button" id="themeToggleBtn" class="icon-btn" title="Koyu / Açık Tema Değiştir">
+          <span id="themeIcon">☀️</span>
+          <span id="themeLabel">Açık Tema</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Oyuncu Kimlik Kartı (İsim seçildikten sonra görünür) -->
+    <section id="identityBanner" class="identity-banner hidden">
+      <div class="identity-details">
+        <div id="myAvatar" class="identity-avatar">M</div>
+        <div class="identity-text">
+          <strong id="myNameDisplay">-</strong>
+          <span id="myRoleDisplay">-</span>
+        </div>
+      </div>
       <div>
-        <div id="bottom-counter" style="font-weight: 700;">0 / 1 takım seçildi</div>
-        <div style="font-size: 0.78rem; color: var(--text-muted);">İlk seçtiğin 1. tercihindir</div>
+        <button type="button" id="leaveNameBtn" class="btn btn-outline btn-sm">
+          Ben değilim (İsmi Bırak)
+        </button>
+      </div>
+    </section>
+
+    <!-- Sekme Menüsü -->
+    <nav class="tabs-bar" aria-label="Sayfa Sekmeleri">
+      <button type="button" id="tabBtnPlayer" class="tab-btn active" data-tab="player">
+        🎮 Oyuncu Ekranı
+      </button>
+      <button type="button" id="tabBtnStatus" class="tab-btn" data-tab="status">
+        📋 Katılım &amp; Durum <span id="statusBadgeCount" class="badge-count">0/10</span>
+      </button>
+      <button type="button" id="tabBtnResults" class="tab-btn hidden" data-tab="results">
+        🏆 Sonuçlar
+      </button>
+      <button type="button" id="tabBtnAdmin" class="tab-btn hidden" data-tab="admin">
+        ⚙️ Yönetim
+      </button>
+    </nav>
+
+    <!-- SEKME 1: OYUNCU EKRANI -->
+    <main id="tabContentPlayer">
+      <!-- Adım 1: İsim Seçilmemişse Katılım Kartı -->
+      <section id="joinSection" class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">1. Adım: Kategorini ve Adını Seç</h2>
+            <p class="card-subtitle">Hesap açmana gerek yok. Önce grubunu, ardından listeden kendi adını seç.</p>
+          </div>
+        </div>
+
+        <div class="category-selector">
+          <button type="button" id="selectCat5Btn" class="category-card selected" data-group="5star">
+            <div class="cat-stars">
+              <span>⭐⭐⭐⭐⭐ 5★ Grubu</span>
+              <span class="pill pill-blue" id="cat5CountPill">5 Kişi</span>
+            </div>
+            <div class="cat-desc">5★ takım havuzundan sırayla seçim yapan grup</div>
+          </button>
+
+          <button type="button" id="selectCat45Btn" class="category-card" data-group="4.5star">
+            <div class="cat-stars">
+              <span>⭐⭐⭐⭐½ 4.5★ Grubu</span>
+              <span class="pill pill-blue" id="cat45CountPill">5 Kişi</span>
+            </div>
+            <div class="cat-desc">4.5★ takım havuzundan sırayla seçim yapan grup</div>
+          </button>
+        </div>
+
+        <div>
+          <h3 class="form-label" id="joinGroupTitle">5★ Grubu Oyuncuları (Sırayla)</h3>
+          <p class="form-hint">Sıradaki k. kişi tam olarak k takım tercih eder. Seçilmiş isimler devre dışıdır.</p>
+          <div id="joinPlayerGrid" class="player-select-grid"></div>
+        </div>
+      </section>
+
+      <!-- Adım 2: İsim Seçildikten Sonra Duruma Göre Kart -->
+      <section id="playerWorkspaceSection" class="hidden">
+        <!-- Hazırlık (Lobi) Bekleme Kartı -->
+        <div id="prepWaitingCard" class="card hidden">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">⏳ Organizatörün Seçimi Başlatması Bekleniyor</h2>
+              <p class="card-subtitle" id="prepWaitingDesc">
+                Adın kaydedildi. Organizatör “Seçimi başlat” dediğinde buradan tercihlerini sırasıyla gönderebileceksin.
+              </p>
+            </div>
+          </div>
+          <div class="selected-order-box">
+            <div class="form-label" id="prepPoolPreviewTitle">Grubunun Takım Havuzu</div>
+            <p class="form-hint">Seçim başladığında bu havuzdan tercih sırasına göre seçim yapacaksın:</p>
+            <div id="prepPoolPreviewChips" class="selected-chips"></div>
+          </div>
+        </div>
+
+        <!-- Tercih (Pick) Düzenleme Kartı -->
+        <div id="pickEditorCard" class="card hidden">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" id="pickEditorTitle">🎯 Takım Tercihlerini Belirle</h2>
+              <p class="card-subtitle" id="pickEditorSubtitle">
+                Grubunda k. sıradasın; tam olarak k takım seçmelisin. İlk tıkladığın takım 1. tercihin olur.
+              </p>
+            </div>
+            <button type="button" id="clearDraftPicksBtn" class="btn btn-outline btn-sm">
+              Seçimleri Temizle
+            </button>
+          </div>
+
+          <div class="selected-order-box">
+            <div class="form-label">Tercih Sıran (Kaldırmak için takıma tıkla):</div>
+            <div id="draftSelectedChips" class="selected-chips"></div>
+          </div>
+
+          <div>
+            <div class="form-label" id="poolGridHeader">Takım Havuzu</div>
+            <div id="teamsPoolGrid" class="teams-grid"></div>
+          </div>
+        </div>
+
+        <!-- Tercih Gönderildi (Mühürlü) Kartı -->
+        <div id="sealedPicksCard" class="card hidden">
+          <div class="sealed-box">
+            <div class="sealed-icon">🔒</div>
+            <h2 class="card-title" style="justify-content: center; margin-bottom: 4px;">
+              Tercihlerin Mühürlendi ve Kaydedildi!
+            </h2>
+            <p class="card-subtitle">
+              Seçimlerin sunucuda gizli tutuluyor; organizatör dahil hiç kimse açıklamaya kadar tercihlerini göremez.
+            </p>
+
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+              <button type="button" id="toggleShowSealedBtn" class="btn btn-outline btn-sm">
+                👁️ Tercihlerimi Göster
+              </button>
+              <button type="button" id="editSubmittedPicksBtn" class="btn btn-primary btn-sm">
+                ✏️ Tercihlerimi Değiştir
+              </button>
+            </div>
+
+            <div id="mySealedPicksList" class="sealed-list hidden"></div>
+          </div>
+        </div>
+
+        <!-- Sonuçlar Açıklandıysa Oyuncu Özeti -->
+        <div id="revealNoticeCard" class="card hidden">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">🎉 Seçimler Açıklandı!</h2>
+              <p class="card-subtitle">Tüm oyuncuların aldığı takımlar ve tercih sıraları Sonuçlar sekmesinde yayınlandı.</p>
+            </div>
+            <button type="button" id="goToResultsBtn" class="btn btn-success btn-sm">
+              🏆 Sonuçları Gör
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- SEKME 2: KATILIM & DURUM PANOSU -->
+    <section id="tabContentStatus" class="hidden">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Turnuva Katılım ve Tercih Durumu</h2>
+            <p class="card-subtitle">
+              Tercihler gizlidir; burada yalnızca kimin katıldığı ve tercihini gönderip göndermediği görünür.
+            </p>
+          </div>
+          <span id="overallProgressPill" class="pill pill-blue">0 / 10 Tercih Gönderildi</span>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <h3 class="form-label" style="margin-bottom: 10px;">⭐⭐⭐⭐⭐ 5★ Grubu</h3>
+            <div id="statusList5Star" class="status-list"></div>
+          </div>
+          <div>
+            <h3 class="form-label" style="margin-bottom: 10px;">⭐⭐⭐⭐½ 4.5★ Grubu</h3>
+            <div id="statusList45Star" class="status-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEKME 3: SONUÇLAR -->
+    <section id="tabContentResults" class="hidden">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">🏆 Turnuva Takım Dağıtım Sonuçları</h2>
+            <p class="card-subtitle">
+              Her oyuncu kendi grubundaki sırasına göre tercih listesindeki ilk alınmamış takımı almıştır.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <h3 class="form-label" style="margin-bottom: 10px;">⭐⭐⭐⭐⭐ 5★ Grubu Dağıtımı</h3>
+            <div id="resultsList5Star"></div>
+          </div>
+          <div>
+            <h3 class="form-label" style="margin-bottom: 10px;">⭐⭐⭐⭐½ 4.5★ Grubu Dağıtımı</h3>
+            <div id="resultsList45Star"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEKME 4: YÖNETİM PANELİ -->
+    <section id="tabContentAdmin" class="hidden">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">⚙️ Organizatör Yönetim Paneli</h2>
+            <p class="card-subtitle" id="adminSummaryText">
+              Turnuva akışını yönetin. Gizlilik gereği organizatör de oyuncuların tercihlerini açıklama öncesinde göremez.
+            </p>
+          </div>
+          <div class="admin-actions-bar" style="margin-top: 0;">
+            <button type="button" id="adminStartPickBtn" class="btn btn-primary btn-sm">
+              ▶️ Seçimi Başlat
+            </button>
+            <button type="button" id="adminRevealBtn" class="btn btn-success btn-sm">
+              📢 Seçimleri Açıkla
+            </button>
+            <button type="button" id="adminResetBtn" class="btn btn-danger btn-sm">
+              🔄 Baştan Başla
+            </button>
+          </div>
+        </div>
+
+        <!-- Katılımcı Yönetimi ve İsim Serbest Bırakma -->
+        <div class="grid-2" style="margin-top: 16px;">
+          <div>
+            <h3 class="form-label">5★ Grubu Katılım / Tercih Durumu</h3>
+            <div id="adminPlayers5Star" class="status-list"></div>
+          </div>
+          <div>
+            <h3 class="form-label">4.5★ Grubu Katılım / Tercih Durumu</h3>
+            <div id="adminPlayers45Star" class="status-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Takım Havuzları ve Oyuncu Listesi Düzenleme (Sadece Hazırlık Fazında) -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">📝 Oyuncu Listeleri ve Takım Havuzları (Hazırlık Aşaması)</h2>
+            <p class="card-subtitle">
+              Her satıra bir isim/takım yazın. Oyuncu sayısını azaltıp artırabilirsiniz; sadece hazırlık aşamasında düzenlenebilir.
+            </p>
+          </div>
+          <button type="button" id="adminSavePoolsBtn" class="btn btn-primary btn-sm">
+            💾 Havuzları ve Oyuncuları Kaydet
+          </button>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label class="form-label" for="adminPlayers5Input">5★ Grubu Oyuncuları (Sırayla, her satıra 1 kişi)</label>
+            <p class="form-hint">1. satırdaki kişi 1 takım, k. satırdaki kişi k takım seçer.</p>
+            <textarea id="adminPlayers5Input" class="players-textarea"></textarea>
+
+            <label class="form-label" for="adminPool5Input">5★ Takım Havuzu (Her satıra 1 takım, en fazla 40 karakter)</label>
+            <p class="form-hint" id="pool5CountHint">15 takım</p>
+            <textarea id="adminPool5Input" class="pool-textarea"></textarea>
+          </div>
+
+          <div>
+            <label class="form-label" for="adminPlayers45Input">4.5★ Grubu Oyuncuları (Sırayla, her satıra 1 kişi)</label>
+            <p class="form-hint">1. satırdaki kişi 1 takım, k. satırdaki kişi k takım seçer.</p>
+            <textarea id="adminPlayers45Input" class="players-textarea"></textarea>
+
+            <label class="form-label" for="adminPool45Input">4.5★ Takım Havuzu (Her satıra 1 takım, en fazla 40 karakter)</label>
+            <p class="form-hint" id="pool45CountHint">22 takım</p>
+            <textarea id="adminPool45Input" class="pool-textarea"></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer-note">
+      <span>EA Sports FC 27 Turnuva Sistemi • Her 4 saniyede bir otomatik güncellenir</span>
+      <button type="button" id="openAdminModalBtn" class="link-btn">Organizatör Anahtarı Gir</button>
+    </footer>
+  </div>
+
+  <!-- Sabit Alt Çubuk (Tercih Aşamasında Seçim Yaparken Görünür) -->
+  <div id="stickyBottomBar" class="sticky-bottom-bar hidden">
+    <div class="sticky-inner">
+      <div class="sticky-counter">
+        <span id="stickySelectionCountText">0 / 1 takım seçildi</span>
+        <span id="stickySelectionHint" class="pill pill-warn">Seçimi tamamla</span>
       </div>
       <div style="display: flex; gap: 8px;">
-        <button id="cancel-edit-btn" class="btn-secondary" style="display: none;">İptal</button>
-        <button id="submit-picks-btn" class="btn-primary" disabled>Tercihlerimi Gönder</button>
+        <button type="button" id="cancelEditPicksBtn" class="btn btn-outline hidden">
+          İptal
+        </button>
+        <button type="button" id="submitPicksBtn" class="btn btn-success" disabled>
+          🚀 Tercihlerimi Gönder
+        </button>
       </div>
     </div>
   </div>
 
   <script>
-    const STORAGE_PLAYER_TOKEN = 'fc27_player_token';
-    const STORAGE_ADMIN_KEY = 'fc27_admin_key';
-    const STORAGE_THEME = 'fc27_theme';
+    (function () {
+      'use strict';
 
-    let appState = null;
-    let selectedCategory = '5star';
-    let currentTab = 'main';
-    let draftPicks = [];
-    let isEditingPicks = false;
-    let showSealedPicks = false;
-    let resetArmed = false, resetTimer = null;
-    let revealArmed = false, revealTimer = null;
-    let poolsDirty = false, playersDirty = false;
-
-    function initTheme() {
-      const s = localStorage.getItem(STORAGE_THEME) || 'dark';
-      document.documentElement.setAttribute('data-theme', s);
-      document.getElementById('theme-toggle').onclick = () => {
-        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem(STORAGE_THEME, next);
+      // --- Güvenli localStorage Yardımcıları ---
+      const STORAGE_KEYS = {
+        PLAYER_TOKEN: 'fc27_player_token',
+        ADMIN_KEY: 'fc27_admin_key',
+        THEME: 'fc27_theme',
+        DEMO_STATE: 'fc27_canvas_demo_state'
       };
-    }
 
-    function checkAdminParam() {
-      const u = new URL(window.location.href);
-      const a = u.searchParams.get('admin');
-      if (a) {
-        localStorage.setItem(STORAGE_ADMIN_KEY, a.trim());
-        u.searchParams.delete('admin');
-        window.history.replaceState({}, document.title, u.pathname + (u.search || '') + u.hash);
-      }
-    }
-
-    let alertTimer = null;
-    function showAlert(msg, type = 'error') {
-      const b = document.getElementById('alert-box');
-      b.textContent = msg;
-      b.className = type === 'error' ? 'alert-error' : 'alert-success';
-      b.style.display = 'block';
-      if (alertTimer) clearTimeout(alertTimer);
-      alertTimer = setTimeout(() => b.style.display = 'none', 5000);
-    }
-
-    async function api(path, method = 'GET', body = null) {
-      const headers = {};
-      const pt = localStorage.getItem(STORAGE_PLAYER_TOKEN);
-      const ak = localStorage.getItem(STORAGE_ADMIN_KEY);
-      if (pt) headers['X-Player-Token'] = pt;
-      if (ak) headers['X-Admin-Key'] = ak;
-      if (body !== null) headers['Content-Type'] = 'application/json';
-
-      const res = await fetch(path, { method, headers, body: body !== null ? JSON.stringify(body) : undefined });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const err = new Error(data.error || 'İşlem başarısız.');
-        err.status = res.status; err.data = data;
-        throw err;
-      }
-      return data;
-    }
-
-    function switchTab(t) {
-      currentTab = t;
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-      document.getElementById('tab-main').style.display = t === 'main' ? 'block' : 'none';
-      document.getElementById('tab-results').style.display = t === 'results' ? 'block' : 'none';
-      document.getElementById('tab-admin').style.display = t === 'admin' ? 'block' : 'none';
-      updateBottomBar();
-    }
-
-    async function fetchState() {
-      try {
-        const data = await api('/api/state');
-        const prev = appState ? appState.phase : null;
-        appState = data;
-        if (!appState.me && localStorage.getItem(STORAGE_PLAYER_TOKEN)) {
-          localStorage.removeItem(STORAGE_PLAYER_TOKEN);
-          draftPicks = []; isEditingPicks = false;
+      function safeGetStorage(key) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch (_e) {
+          return null;
         }
-        if (prev && prev !== 'revealed' && appState.phase === 'revealed') switchTab('results');
-        render();
-      } catch (e) { console.error(e.message); }
-    }
+      }
 
-    function render() {
-      if (!appState) return;
+      function safeSetStorage(key, value) {
+        try {
+          if (value === null || value === undefined) {
+            window.localStorage.removeItem(key);
+          } else {
+            window.localStorage.setItem(key, value);
+          }
+        } catch (_e) {
+          // Sandbox engeli varsa sessizce geç
+        }
+      }
 
-      const badge = document.getElementById('phase-badge');
-      if (appState.phase === 'lobby') { badge.textContent = 'Hazırlık'; badge.className = 'phase-pill phase-lobby'; }
-      else if (appState.phase === 'pick') { badge.textContent = 'Seçim Açık'; badge.className = 'phase-pill phase-pick'; }
-      else { badge.textContent = 'Açıklandı'; badge.className = 'phase-pill phase-revealed'; }
-
-      document.getElementById('tab-btn-admin').style.display = appState.isAdmin ? 'inline-block' : 'none';
-      if (!appState.isAdmin && currentTab === 'admin') switchTab('main');
-
-      // Grup oyuncu etiketleri
-      document.getElementById('label-players-5star').textContent = (appState.groups['5star'].players || []).join(', ');
-      document.getElementById('label-players-4.5star').textContent = (appState.groups['4.5star'].players || []).join(', ');
-
-      renderClaimSection();
-      renderPickSection();
-      renderStatus();
-      renderResults();
-      if (appState.isAdmin) renderAdmin();
-      updateBottomBar();
-    }
-
-    function renderClaimSection() {
-      const claim = document.getElementById('claim-section');
-      const meSec = document.getElementById('me-section');
-
-      if (!appState.me) {
-        meSec.style.display = 'none';
-        claim.style.display = appState.phase === 'revealed' ? 'none' : 'block';
-        document.querySelectorAll('.group-card-btn').forEach(b => b.classList.toggle('selected', b.dataset.group === selectedCategory));
-
-        const grid = document.getElementById('name-buttons-container');
-        grid.innerHTML = '';
-        (appState.groups[selectedCategory].players || []).forEach(name => {
-          const p = appState.players[name] || {};
-          const btn = document.createElement('button');
-          btn.className = 'name-btn';
-          btn.disabled = p.claimed;
-          btn.innerHTML = `<span class="order-tag">${p.order}. Sıra (${p.order} Tercih)</span><span class="player-name">${name}</span><span class="taken-tag">${p.claimed ? 'Alındı' : 'Seçmek için tıkla'}</span>`;
-          btn.onclick = async () => {
-            try {
-              const res = await api('/api/claim', 'POST', { name });
-              localStorage.setItem(STORAGE_PLAYER_TOKEN, res.token);
-              appState = res.state;
-              draftPicks = [...(appState.me?.picks || [])];
-              showAlert(`Hoş geldin ${name}!`, 'success');
-              render();
-            } catch (err) { showAlert(err.message); fetchState(); }
-          };
-          grid.appendChild(btn);
+      // --- Bildirim (Toast) Sistemi ---
+      const toastContainer = document.getElementById('toastContainer');
+      function showToast(message, type) {
+        const el = document.createElement('div');
+        el.className = 'toast ' + (type || 'info');
+        const span = document.createElement('span');
+        span.textContent = message;
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn btn-outline btn-sm';
+        closeBtn.style.padding = '2px 7px';
+        closeBtn.textContent = '✕';
+        closeBtn.addEventListener('click', function () {
+          el.remove();
         });
-      } else {
-        claim.style.display = 'none';
-        meSec.style.display = 'flex';
-        const m = appState.me;
-        document.getElementById('me-title').textContent = `${m.name} (${appState.groups[m.group].title})`;
-        document.getElementById('me-subtitle').textContent = `${m.order}. sıradasın — Tam olarak ${m.order} takım tercih etmelisin.`;
-        document.getElementById('unclaim-btn').style.display = (m.submitted || appState.phase === 'revealed') ? 'none' : 'inline-block';
-      }
-    }
-
-    function renderPickSection() {
-      const sec = document.getElementById('pick-section');
-      const me = appState.me;
-      if (!me) { sec.style.display = 'none'; return; }
-      sec.style.display = 'block';
-
-      const title = document.getElementById('pick-card-title');
-      const desc = document.getElementById('pick-card-desc');
-      const sealed = document.getElementById('sealed-view');
-      const picking = document.getElementById('picking-view');
-
-      if (appState.phase === 'lobby') {
-        title.textContent = 'Seçim Bekleniyor';
-        desc.textContent = `Yönetici seçimi başlattığında ${me.order} takım tercihini girebileceksin.`;
-        sealed.style.display = 'none'; picking.style.display = 'none';
-        return;
-      }
-      if (appState.phase === 'revealed') {
-        title.textContent = 'Seçimler Açıklandı!';
-        desc.textContent = 'Sonuçlar sekmesinden takımını görebilirsin.';
-        sealed.style.display = 'none'; picking.style.display = 'none';
-        return;
+        el.appendChild(span);
+        el.appendChild(closeBtn);
+        toastContainer.appendChild(el);
+        setTimeout(function () {
+          if (el.parentNode) el.remove();
+        }, 4200);
       }
 
-      if (me.submitted && !isEditingPicks) {
-        title.textContent = 'Tercihlerin Alındı';
-        desc.textContent = `${me.order} takım tercihin mühürlendi.`;
-        sealed.style.display = 'block'; picking.style.display = 'none';
-        const list = document.getElementById('my-sealed-picks-list');
-        document.getElementById('toggle-show-picks-btn').textContent = showSealedPicks ? 'Tercihlerimi Gizle' : 'Tercihlerimi Göster';
-        list.style.display = showSealedPicks ? 'block' : 'none';
-        if (showSealedPicks) {
-          list.innerHTML = '';
-          me.picks.forEach(t => { const li = document.createElement('li'); li.textContent = t; list.appendChild(li); });
+      // --- Özel Onay Modalı (window.confirm yerine) ---
+      const confirmModal = document.getElementById('confirmModal');
+      const confirmModalTitle = document.getElementById('confirmModalTitle');
+      const confirmModalBody = document.getElementById('confirmModalBody');
+      const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+      const confirmApproveBtn = document.getElementById('confirmApproveBtn');
+      let pendingConfirmCallback = null;
+
+      function openConfirmModal(title, message, onConfirm) {
+        confirmModalTitle.textContent = title;
+        confirmModalBody.textContent = message;
+        pendingConfirmCallback = onConfirm;
+        confirmModal.classList.add('open');
+      }
+
+      function closeConfirmModal() {
+        confirmModal.classList.remove('open');
+        pendingConfirmCallback = null;
+      }
+
+      confirmCancelBtn.addEventListener('click', closeConfirmModal);
+      confirmApproveBtn.addEventListener('click', function () {
+        const cb = pendingConfirmCallback;
+        closeConfirmModal();
+        if (typeof cb === 'function') cb();
+      });
+
+      // --- Tema Yönetimi ---
+      const themeToggleBtn = document.getElementById('themeToggleBtn');
+      const themeIcon = document.getElementById('themeIcon');
+      const themeLabel = document.getElementById('themeLabel');
+
+      function applyTheme(theme) {
+        const validTheme = theme === 'light' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', validTheme);
+        if (validTheme === 'dark') {
+          themeIcon.textContent = '☀️';
+          themeLabel.textContent = 'Açık Tema';
+        } else {
+          themeIcon.textContent = '🌙';
+          themeLabel.textContent = 'Koyu Tema';
         }
-      } else {
-        title.textContent = `${me.order} Takım Tercihini Seç`;
-        desc.textContent = 'İstediğin takımlara tıklayarak sırayla ekle/çıkar.';
-        sealed.style.display = 'none'; picking.style.display = 'block';
+        safeSetStorage(STORAGE_KEYS.THEME, validTheme);
+      }
 
-        const pool = appState.pools[me.group] || [];
-        draftPicks = draftPicks.filter(t => pool.includes(t));
-        const grid = document.getElementById('teams-grid');
-        grid.innerHTML = '';
+      const savedTheme =
+        safeGetStorage(STORAGE_KEYS.THEME) ||
+        (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
+          ? 'light'
+          : 'dark');
+      applyTheme(savedTheme);
 
-        pool.forEach(t => {
-          const idx = draftPicks.indexOf(t);
-          const sel = idx !== -1;
-          const div = document.createElement('div');
-          div.className = 'team-item' + (sel ? ' selected' : '');
-          div.innerHTML = `<span>${t}</span>${sel ? `<span class="pick-badge">${idx + 1}. Tercih</span>` : ''}`;
-          div.onclick = () => {
-            if (sel) draftPicks.splice(idx, 1);
-            else {
-              if (draftPicks.length >= me.order) return showAlert(`En fazla ${me.order} takım seçebilirsin.`);
-              draftPicks.push(t);
+      themeToggleBtn.addEventListener('click', function () {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        applyTheme(current === 'dark' ? 'light' : 'dark');
+      });
+
+      // --- URL'den ?admin=ANAHTAR Okuma ve Temizleme ---
+      let playerToken = safeGetStorage(STORAGE_KEYS.PLAYER_TOKEN) || '';
+      let adminKey = safeGetStorage(STORAGE_KEYS.ADMIN_KEY) || '';
+
+      (function checkUrlAdminParam() {
+        try {
+          const url = new URL(window.location.href);
+          const urlAdmin = url.searchParams.get('admin');
+          if (urlAdmin && urlAdmin.trim()) {
+            adminKey = urlAdmin.trim();
+            safeSetStorage(STORAGE_KEYS.ADMIN_KEY, adminKey);
+            url.searchParams.delete('admin');
+            const cleanSearch = url.searchParams.toString();
+            const cleanUrl =
+              url.pathname + (cleanSearch ? '?' + cleanSearch : '') + (url.hash || '');
+            window.history.replaceState({}, document.title, cleanUrl);
+          }
+        } catch (_e) {
+          // Sandbox URL hatası olursa yoksay
+        }
+      })();
+
+      // --- Canvas Önizleme / Çevrimdışı Yedek (Fallback) Motoru ---
+      // Sunucu (node server.js) çalışıyorsa tüm istekler gerçek sunucuya gider.
+      // Yalnızca statik Canvas önizlemesinde sunucu yoksa tarayıcı içi simülasyon devreye girer.
+      const DEFAULT_DEMO_GROUPS = {
+        '5star': {
+          id: '5star',
+          label: '5★ Grubu',
+          subtitle: 'En Kötü Oynayanlar',
+          players: ['Mustafa', 'Ali', 'İskender', 'Enes', 'Yasin'],
+          pool: [
+            'Paris Saint-Germain', 'Real Madrid', 'FC Barcelona', 'Arsenal',
+            'Bayern München', 'Manchester City', 'Liverpool', 'Atlético de Madrid',
+            'İspanya', 'Fransa', 'Portekiz', 'İngiltere', 'Brezilya', 'Almanya', 'İtalya'
+          ]
+        },
+        '4.5star': {
+          id: '4.5star',
+          label: '4.5★ Grubu',
+          subtitle: 'En İyi Oynayanlar',
+          players: ['Lokman', 'Ekrem', 'Serhat', 'Sefa', 'Emre'],
+          pool: [
+            'Inter (Lombardia FC)', 'Borussia Dortmund', 'Chelsea', 'Tottenham Hotspur',
+            'Napoli', 'AS Roma', 'Manchester United', 'Milano FC (AC Milan)',
+            'Juventus', 'Galatasaray', 'Fenerbahçe', 'Bayer 04 Leverkusen',
+            'Newcastle United', 'Athletic Club (Bilbao)', 'Aston Villa', 'Nottingham Forest',
+            'Crystal Palace', 'Real Betis', 'Atalanta (Bergamo Calcio)', 'RB Leipzig',
+            'Sunderland', 'FC Porto'
+          ]
+        }
+      };
+
+      function getFallbackStore() {
+        const raw = safeGetStorage(STORAGE_KEYS.DEMO_STATE);
+        if (raw) {
+          try {
+            return JSON.parse(raw);
+          } catch (_e) {}
+        }
+        const groups = {};
+        ['5star', '4.5star'].forEach(function (k) {
+          const d = DEFAULT_DEMO_GROUPS[k];
+          groups[k] = {
+            id: d.id,
+            label: d.label,
+            subtitle: d.subtitle,
+            pool: d.pool.slice(),
+            players: d.players.map(function (name) {
+              return { name: name, token: null, picks: [] };
+            })
+          };
+        });
+        const init = { phase: 'prep', updatedAt: new Date().toISOString(), groups: groups, results: null };
+        safeSetStorage(STORAGE_KEYS.DEMO_STATE, JSON.stringify(init));
+        return init;
+      }
+
+      function saveFallbackStore(st) {
+        st.updatedAt = new Date().toISOString();
+        safeSetStorage(STORAGE_KEYS.DEMO_STATE, JSON.stringify(st));
+      }
+
+      function buildFallbackClientState(st, pToken, aKey) {
+        let meObj = null;
+        let totalPlayers = 0;
+        let claimedCount = 0;
+        let pickedCount = 0;
+        const groupsOut = {};
+
+        ['5star', '4.5star'].forEach(function (gKey) {
+          const g = st.groups[gKey];
+          groupsOut[gKey] = {
+            id: g.id,
+            label: g.label,
+            subtitle: g.subtitle,
+            pool: g.pool.slice(),
+            players: g.players.map(function (p, idx) {
+              const req = idx + 1;
+              const claimed = Boolean(p.token);
+              const hasPicked = Array.isArray(p.picks) && p.picks.length === req;
+              totalPlayers++;
+              if (claimed) claimedCount++;
+              if (hasPicked) pickedCount++;
+              if (pToken && p.token === pToken) {
+                meObj = {
+                  group: gKey,
+                  groupLabel: g.label,
+                  name: p.name,
+                  order: req,
+                  requiredPicks: req,
+                  hasPicked: hasPicked,
+                  picks: p.picks.slice()
+                };
+              }
+              return { name: p.name, order: req, requiredPicks: req, claimed: claimed, hasPicked: hasPicked };
+            })
+          };
+        });
+
+        const res = {
+          phase: st.phase,
+          updatedAt: st.updatedAt,
+          summary: { totalPlayers: totalPlayers, claimedCount: claimedCount, pickedCount: pickedCount },
+          groups: groupsOut,
+          me: meObj,
+          isAdmin: Boolean(aKey)
+        };
+        if (st.phase === 'reveal' && st.results) {
+          res.results = st.results;
+        }
+        return res;
+      }
+
+      function handleFallbackRequest(path, method, body) {
+        const st = getFallbackStore();
+        if (method === 'GET' && path === '/api/state') {
+          return { ok: true, status: 200, data: buildFallbackClientState(st, playerToken, adminKey) };
+        }
+        if (path === '/api/claim') {
+          if (st.phase === 'reveal') {
+            return { ok: false, status: 400, data: { error: 'Seçimler açıklandıktan sonra yeni isim alınamaz.' } };
+          }
+          const g = st.groups[body.group];
+          if (!g) return { ok: false, status: 400, data: { error: 'Geçersiz grup.' } };
+          const idx = g.players.findIndex(function (p) { return p.name === body.name; });
+          if (idx === -1) return { ok: false, status: 404, data: { error: 'İsim bulunamadı.' } };
+          const target = g.players[idx];
+          if (target.token && target.token !== playerToken) {
+            return { ok: false, status: 409, data: { error: 'Bu isim az önce alındı.' } };
+          }
+          // Önceki ismi temizle
+          ['5star', '4.5star'].forEach(function (gk) {
+            st.groups[gk].players.forEach(function (p) {
+              if (playerToken && p.token === playerToken) {
+                p.token = null;
+                p.picks = [];
+              }
+            });
+          });
+          const newTok = 'tok_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+          target.token = newTok;
+          saveFallbackStore(st);
+          return {
+            ok: true,
+            status: 200,
+            data: {
+              ok: true,
+              token: newTok,
+              group: body.group,
+              name: target.name,
+              state: buildFallbackClientState(st, newTok, adminKey)
             }
-            renderPickSection(); updateBottomBar();
           };
-          grid.appendChild(div);
-        });
-      }
-    }
-
-    function updateBottomBar() {
-      const bar = document.getElementById('bottom-bar');
-      const me = appState?.me;
-      const show = currentTab === 'main' && appState?.phase === 'pick' && me && (!me.submitted || isEditingPicks);
-      bar.style.display = show ? 'block' : 'none';
-      if (!show) return;
-
-      document.getElementById('bottom-counter').textContent = `${draftPicks.length} / ${me.order} takım seçildi`;
-      document.getElementById('submit-picks-btn').disabled = draftPicks.length !== me.order;
-      document.getElementById('cancel-edit-btn').style.display = (me.submitted && isEditingPicks) ? 'inline-block' : 'none';
-    }
-
-    function renderStatus() {
-      ['5star', '4.5star'].forEach(gid => {
-        const ul = document.getElementById(`status-list-${gid}`);
-        ul.innerHTML = '';
-        (appState.groups[gid].players || []).forEach(name => {
-          const p = appState.players[name] || {};
-          const li = document.createElement('li');
-          li.className = 'status-row';
-          li.innerHTML = `
-            <span><strong>${p.order}. ${name}</strong> <small style="color:var(--text-muted)">(${p.order} tercih)</small></span>
-            <div style="display:flex;gap:6px;">
-              <span class="badge ${p.claimed ? 'badge-ok' : 'badge-wait'}">${p.claimed ? 'Katıldı' : 'Katılmadı'}</span>
-              <span class="badge ${p.submitted ? 'badge-ok' : 'badge-warn'}">${p.submitted ? 'Gönderdi' : 'Bekliyor'}</span>
-            </div>
-          `;
-          ul.appendChild(li);
-        });
-      });
-    }
-
-    function renderResults() {
-      const notReady = document.getElementById('results-not-ready');
-      const ready = document.getElementById('results-ready');
-      if (appState.phase !== 'revealed' || !appState.results) {
-        notReady.style.display = 'block'; ready.style.display = 'none'; return;
-      }
-      notReady.style.display = 'none'; ready.style.display = 'grid';
-
-      ['5star', '4.5star'].forEach(gid => {
-        const box = document.getElementById(`results-list-${gid}`);
-        box.innerHTML = '';
-        (appState.results[gid] || []).forEach(r => {
-          const row = document.createElement('div');
-          row.className = 'result-row';
-          row.innerHTML = `
-            <div class="result-header">
-              <span><strong>${r.order}. ${r.name}</strong></span>
-              <span class="assigned-team">${r.assignedTeam ? `⚽ ${r.assignedTeam} (${r.matchedChoiceIndex}. tercihi)` : '— Tercih Yapmadı'}</span>
-            </div>
-            <div class="picks-chain">${(r.picks || []).map((t, i) => `<span class="pick-chip ${i+1===r.matchedChoiceIndex?'matched':''}">${i+1})${t}</span>`).join('')}</div>
-          `;
-          box.appendChild(row);
-        });
-      });
-    }
-
-    function renderAdmin() {
-      const all = Object.values(appState.players);
-      document.getElementById('admin-summary-text').textContent =
-        `Katılan: ${all.filter(p=>p.claimed).length} / ${all.length} — Tercih Veren: ${all.filter(p=>p.submitted).length} / ${all.length}`;
-
-      document.getElementById('admin-start-btn').disabled = appState.phase !== 'lobby';
-      document.getElementById('admin-reveal-btn').disabled = appState.phase !== 'pick';
-
-      const isLobby = appState.phase === 'lobby';
-
-      // Oyuncuları metin alanına yükle
-      const pla5 = document.getElementById('players-textarea-5star');
-      const pla45 = document.getElementById('players-textarea-4.5star');
-      const savePlaBtn = document.getElementById('admin-save-players-btn');
-      pla5.disabled = !isLobby; pla45.disabled = !isLobby; savePlaBtn.disabled = !isLobby;
-      if (!playersDirty) {
-        pla5.value = (appState.groups['5star'].players || []).join('\n');
-        pla45.value = (appState.groups['4.5star'].players || []).join('\n');
-      }
-
-      // Havuzları yükle
-      const pool5 = document.getElementById('pool-textarea-5star');
-      const pool45 = document.getElementById('pool-textarea-4.5star');
-      const savePoolBtn = document.getElementById('admin-save-pools-btn');
-      pool5.disabled = !isLobby; pool45.disabled = !isLobby; savePoolBtn.disabled = !isLobby;
-      if (!poolsDirty) {
-        pool5.value = (appState.pools['5star'] || []).join('\n');
-        pool45.value = (appState.pools['4.5star'] || []).join('\n');
-      }
-
-      // Serbest bırak listesi
-      ['5star', '4.5star'].forEach(gid => {
-        const ul = document.getElementById(`admin-players-${gid}`);
-        ul.innerHTML = '';
-        (appState.groups[gid].players || []).forEach(name => {
-          const p = appState.players[name] || {};
-          const li = document.createElement('li');
-          li.className = 'status-row';
-          li.innerHTML = `<span><strong>${p.order}. ${name}</strong> — ${p.claimed ? 'Katıldı' : 'Boş'}</span>`;
-          const b = document.createElement('button');
-          b.className = 'btn-danger btn-sm';
-          b.textContent = 'Serbest bırak';
-          b.disabled = !p.claimed;
-          b.onclick = async () => {
-            const r = await api('/api/admin/release', 'POST', { name });
-            appState = r.state; showAlert(`${name} serbest bırakıldı.`, 'success'); render();
-          };
-          li.appendChild(b);
-          ul.appendChild(li);
-        });
-      });
-    }
-
-    function initEvents() {
-      document.querySelectorAll('.tab-btn').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
-      document.querySelectorAll('.group-card-btn').forEach(b => b.onclick = () => { selectedCategory = b.dataset.group; renderClaimSection(); });
-
-      document.getElementById('unclaim-btn').onclick = async () => {
-        const r = await api('/api/unclaim', 'POST');
-        localStorage.removeItem(STORAGE_PLAYER_TOKEN);
-        appState = r.state; draftPicks = []; isEditingPicks = false; render();
-      };
-
-      document.getElementById('submit-picks-btn').onclick = async () => {
-        try {
-          const r = await api('/api/pick', 'POST', { picks: draftPicks });
-          appState = r.state; isEditingPicks = false; showSealedPicks = false;
-          showAlert('Tercihlerin başarıyla mühürlendi!', 'success'); render();
-        } catch (e) { showAlert(e.message); }
-      };
-
-      document.getElementById('toggle-show-picks-btn').onclick = () => { showSealedPicks = !showSealedPicks; renderPickSection(); };
-      document.getElementById('edit-picks-btn').onclick = () => { draftPicks = [...(appState?.me?.picks || [])]; isEditingPicks = true; renderPickSection(); updateBottomBar(); };
-      document.getElementById('cancel-edit-btn').onclick = () => { isEditingPicks = false; renderPickSection(); updateBottomBar(); };
-
-      // Oyuncu Listesini Kaydetme
-      ['players-textarea-5star', 'players-textarea-4.5star'].forEach(id => {
-        document.getElementById(id).oninput = () => playersDirty = true;
-      });
-      document.getElementById('admin-save-players-btn').onclick = async () => {
-        const l5 = document.getElementById('players-textarea-5star').value.split('\n').map(s=>s.trim()).filter(Boolean);
-        const l45 = document.getElementById('players-textarea-4.5star').value.split('\n').map(s=>s.trim()).filter(Boolean);
-        try {
-          const r = await api('/api/admin/players', 'POST', { '5star': l5, '4.5star': l45 });
-          playersDirty = false; appState = r.state; showAlert('Oyuncu listesi güncellendi!', 'success'); render();
-        } catch (e) { showAlert(e.message); }
-      };
-
-      // Havuzları Kaydetme
-      ['pool-textarea-5star', 'pool-textarea-4.5star'].forEach(id => {
-        document.getElementById(id).oninput = () => poolsDirty = true;
-      });
-      document.getElementById('admin-save-pools-btn').onclick = async () => {
-        const l5 = document.getElementById('pool-textarea-5star').value.split('\n').map(s=>s.trim()).filter(Boolean);
-        const l45 = document.getElementById('pool-textarea-4.5star').value.split('\n').map(s=>s.trim()).filter(Boolean);
-        try {
-          const r = await api('/api/admin/pools', 'POST', { '5star': l5, '4.5star': l45 });
-          poolsDirty = false; appState = r.state; showAlert('Takım havuzları güncellendi!', 'success'); render();
-        } catch (e) { showAlert(e.message); }
-      };
-
-      document.getElementById('admin-start-btn').onclick = async () => {
-        try { const r = await api('/api/admin/start', 'POST'); appState = r.state; showAlert('Seçim aşaması başladı!', 'success'); render(); }
-        catch (e) { showAlert(e.message); }
-      };
-
-      const revBtn = document.getElementById('admin-reveal-btn');
-      revBtn.onclick = async () => {
-        try {
-          const r = await api('/api/admin/reveal', 'POST', { force: revealArmed });
-          revealArmed = false; revBtn.textContent = 'Seçimleri Açıkla';
-          appState = r.state; showAlert('Seçimler açıklandı!', 'success'); switchTab('results'); render();
-        } catch (e) {
-          if (e.status === 409 && e.data?.needsConfirm) {
-            revealArmed = true; revBtn.textContent = `Eksik Var (${e.data.missingCount}) — Yine de Açıkla`;
-            showAlert(e.message);
-            if (revealTimer) clearTimeout(revealTimer);
-            revealTimer = setTimeout(() => { revealArmed = false; revBtn.textContent = 'Seçimleri Açıkla'; }, 6000);
-          } else showAlert(e.message);
         }
-      };
+        if (path === '/api/leave') {
+          let foundP = null;
+          ['5star', '4.5star'].forEach(function (gk) {
+            st.groups[gk].players.forEach(function (p) {
+              if (playerToken && p.token === playerToken) foundP = p;
+            });
+          });
+          if (!foundP) return { ok: false, status: 401, data: { error: 'Aktif oyuncu seçimi bulunamadı.' } };
+          if (foundP.picks && foundP.picks.length > 0) {
+            return { ok: false, status: 400, data: { error: 'Tercih gönderdikten sonra adını bırakamazsın.' } };
+          }
+          foundP.token = null;
+          foundP.picks = [];
+          saveFallbackStore(st);
+          return { ok: true, status: 200, data: { ok: true, state: buildFallbackClientState(st, '', adminKey) } };
+        }
+        if (path === '/api/pick') {
+          if (st.phase !== 'pick') {
+            return { ok: false, status: 400, data: { error: 'Şu anda tercih aşamasında değiliz.' } };
+          }
+          let foundInfo = null;
+          ['5star', '4.5star'].forEach(function (gk) {
+            st.groups[gk].players.forEach(function (p, i) {
+              if (playerToken && p.token === playerToken) {
+                foundInfo = { p: p, req: i + 1, pool: st.groups[gk].pool };
+              }
+            });
+          });
+          if (!foundInfo) return { ok: false, status: 401, data: { error: 'Önce adını seçmelisin.' } };
+          if (!Array.isArray(body.picks) || body.picks.length !== foundInfo.req) {
+            return { ok: false, status: 400, data: { error: 'Tam olarak ' + foundInfo.req + ' takım seçmelisin.' } };
+          }
+          foundInfo.p.picks = body.picks.slice();
+          saveFallbackStore(st);
+          return { ok: true, status: 200, data: { ok: true, state: buildFallbackClientState(st, playerToken, adminKey) } };
+        }
+        if (path.indexOf('/api/admin/') === 0) {
+          if (!adminKey) {
+            return { ok: false, status: 403, data: { error: 'Yetkisiz işlem: Yönetici anahtarı geçersiz.' } };
+          }
+          if (path === '/api/admin/verify') {
+            return { ok: true, status: 200, data: { ok: true, state: buildFallbackClientState(st, playerToken, adminKey) } };
+          }
+          if (path === '/api/admin/start') {
+            st.phase = 'pick';
+            st.results = null;
+            saveFallbackStore(st);
+            return { ok: true, status: 200, data: { ok: true, state: buildFallbackClientState(st, playerToken, adminKey) } };
+          }
+          if (path === '/api/admin/release') {
+            const g = st.groups[body.group];
+            if (g) {
+              const p = g.players.find(function (x) { return x.name === body.name; });
+              if (p) { p.token = null; p.picks = []; }
+            }
+            saveFallbackStore(st);
+            return { ok: true, status: 200, data: { ok: true, state: buildFallbackClientState(st, playerToken, adminKey) } };
+          }
+          if (path === '/api/admin/pools') {
+            if (st.phase !== 'prep') {
+              return { ok: false, status: 400, data: { error: 'Sadece hazırlık aşamasında düzenlenebilir.' } };
+            }
+            ['5star', '4.5star'].forEach(function (gk) {
+              if (body.players && Array.isArray(body.players[gk]) && body.players[gk].length > 0) {
+                const oldMap = {};
+                st.groups[gk].players.forEach(function (p) { oldMap[p.name] = p; });
+                st.groups[gk].players = body.players[gk].map(function (nm) {
+                  return oldMap[nm] || { name: nm, token: null, picks: [] };
+                });
+              }
+              if (body.pools && Array.isArray(body.pools[gk])) {
+                st.groups[gk].pool = body.pools[gk].slice();
+              }
+            });
+            saveFallbackStore(st);
+            return { ok: true, status: 200, data: { ok: true, state: buildFallbackClientState(st, playerToken, adminKey) } };
+          }
+          if (path === '/api/admin/reveal') {
+            const groupsRes = {};
+            ['5star', '4.5star'].forEach(function (gk) {
+              const g = st.groups[gk];
+              const taken = {};
+              const allocations = g.players.map(function (p, idx) {
+                const ord = idx + 1;
+                const picks = Array.isArray(p.picks) && p.picks.length === ord ? p.picks : [];
+                let assignedTeam = null;
+                let assignedRank = null;
+                for (let i = 0; i < picks.length; i++) {
+                  if (!taken[picks[i]]) {
+                    assignedTeam = picks[i];
+                    assignedRank = i + 1;
+                    break;
+                  }
+                }
+                const prefs = picks.map(function (tm, i) {
+                  const r = i + 1;
+                  const prev = taken[tm] || null;
+                  let status = 'unused';
+                  if (assignedRank === r) status = 'assigned';
+                  else if (assignedRank === null || r < assignedRank) status = 'taken';
+                  return { rank: r, team: tm, status: status, takenBy: prev };
+                });
+                if (assignedTeam) taken[assignedTeam] = p.name;
+                return {
+                  name: p.name,
+                  order: ord,
+                  requiredPicks: ord,
+                  hasPicked: picks.length === ord,
+                  assignedTeam: assignedTeam,
+                  assignedPreferenceRank: assignedRank,
+                  picks: picks,
+                  preferences: prefs
+                };
+              });
+              groupsRes[gk] = { id: g.id, label: g.label, subtitle: g.subtitle, allocations: allocations };
+            });
+            st.results = { revealedAt: new Date().toISOString(), groups: groupsRes };
+            st.phase = 'reveal';
+            saveFallbackStore(st);
+            return { ok: true, status: 200, data: { ok: true, state: buildFallbackClientState(st, playerToken, adminKey) } };
+          }
+          if (path === '/api/admin/reset') {
+            ['5star', '4.5star'].forEach(function (gk) {
+              st.groups[gk].players.forEach(function (p) { p.picks = []; });
+            });
+            st.phase = 'prep';
+            st.results = null;
+            saveFallbackStore(st);
+            return { ok: true, status: 200, data: { ok: true, state: buildFallbackClientState(st, playerToken, adminKey) } };
+          }
+        }
+        return { ok: false, status: 404, data: { error: 'Bulunamadı' } };
+      }
 
-      const resBtn = document.getElementById('admin-reset-btn');
-      resBtn.onclick = async () => {
-        if (!resetArmed) {
-          resetArmed = true; resBtn.textContent = 'Emin misin? Tekrar Tıkla';
-          if (resetTimer) clearTimeout(resetTimer);
-          resetTimer = setTimeout(() => { resetArmed = false; resBtn.textContent = 'Baştan Başla'; }, 5000);
+      async function apiRequest(path, method, bodyObj) {
+        const headers = { 'Accept': 'application/json' };
+        if (playerToken) headers['X-Player-Token'] = playerToken;
+        if (adminKey) headers['X-Admin-Key'] = adminKey;
+        if (bodyObj) headers['Content-Type'] = 'application/json';
+
+        try {
+          const response = await fetch(path, {
+            method: method || 'GET',
+            headers: headers,
+            body: bodyObj ? JSON.stringify(bodyObj) : undefined,
+            cache: 'no-store'
+          });
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.indexOf('application/json') === -1) {
+            throw new Error('JSON olmayan yanıt');
+          }
+          const data = await response.json();
+          return { ok: response.ok, status: response.status, data: data };
+        } catch (_networkErr) {
+          // Yalnızca sunucu bağlantısı olmayan statik önizleme ortamında yerel simülasyonu kullan
+          return handleFallbackRequest(path, method || 'GET', bodyObj || {});
+        }
+      }
+
+      // --- Uygulama Durumu (State) ---
+      let serverState = null;
+      let activeTab = 'player';
+      let selectedJoinGroup = '5star';
+      let draftPicks = [];
+      let isEditingSubmittedPicks = false;
+      let showSealedPicks = false;
+      let resetArmedUntil = 0;
+      let resetArmTimer = null;
+      let adminPoolsDirty = false;
+
+      // --- DOM Referansları ---
+      const phaseBadge = document.getElementById('phaseBadge');
+      const phaseText = document.getElementById('phaseText');
+      const identityBanner = document.getElementById('identityBanner');
+      const myAvatar = document.getElementById('myAvatar');
+      const myNameDisplay = document.getElementById('myNameDisplay');
+      const myRoleDisplay = document.getElementById('myRoleDisplay');
+      const leaveNameBtn = document.getElementById('leaveNameBtn');
+
+      const tabBtnPlayer = document.getElementById('tabBtnPlayer');
+      const tabBtnStatus = document.getElementById('tabBtnStatus');
+      const tabBtnResults = document.getElementById('tabBtnResults');
+      const tabBtnAdmin = document.getElementById('tabBtnAdmin');
+      const statusBadgeCount = document.getElementById('statusBadgeCount');
+
+      const tabContentPlayer = document.getElementById('tabContentPlayer');
+      const tabContentStatus = document.getElementById('tabContentStatus');
+      const tabContentResults = document.getElementById('tabContentResults');
+      const tabContentAdmin = document.getElementById('tabContentAdmin');
+
+      const joinSection = document.getElementById('joinSection');
+      const selectCat5Btn = document.getElementById('selectCat5Btn');
+      const selectCat45Btn = document.getElementById('selectCat45Btn');
+      const cat5CountPill = document.getElementById('cat5CountPill');
+      const cat45CountPill = document.getElementById('cat45CountPill');
+      const joinGroupTitle = document.getElementById('joinGroupTitle');
+      const joinPlayerGrid = document.getElementById('joinPlayerGrid');
+
+      const playerWorkspaceSection = document.getElementById('playerWorkspaceSection');
+      const prepWaitingCard = document.getElementById('prepWaitingCard');
+      const prepWaitingDesc = document.getElementById('prepWaitingDesc');
+      const prepPoolPreviewTitle = document.getElementById('prepPoolPreviewTitle');
+      const prepPoolPreviewChips = document.getElementById('prepPoolPreviewChips');
+
+      const pickEditorCard = document.getElementById('pickEditorCard');
+      const pickEditorTitle = document.getElementById('pickEditorTitle');
+      const pickEditorSubtitle = document.getElementById('pickEditorSubtitle');
+      const clearDraftPicksBtn = document.getElementById('clearDraftPicksBtn');
+      const draftSelectedChips = document.getElementById('draftSelectedChips');
+      const poolGridHeader = document.getElementById('poolGridHeader');
+      const teamsPoolGrid = document.getElementById('teamsPoolGrid');
+
+      const sealedPicksCard = document.getElementById('sealedPicksCard');
+      const toggleShowSealedBtn = document.getElementById('toggleShowSealedBtn');
+      const editSubmittedPicksBtn = document.getElementById('editSubmittedPicksBtn');
+      const mySealedPicksList = document.getElementById('mySealedPicksList');
+
+      const revealNoticeCard = document.getElementById('revealNoticeCard');
+      const goToResultsBtn = document.getElementById('goToResultsBtn');
+
+      const stickyBottomBar = document.getElementById('stickyBottomBar');
+      const stickySelectionCountText = document.getElementById('stickySelectionCountText');
+      const stickySelectionHint = document.getElementById('stickySelectionHint');
+      const cancelEditPicksBtn = document.getElementById('cancelEditPicksBtn');
+      const submitPicksBtn = document.getElementById('submitPicksBtn');
+
+      const overallProgressPill = document.getElementById('overallProgressPill');
+      const statusList5Star = document.getElementById('statusList5Star');
+      const statusList45Star = document.getElementById('statusList45Star');
+
+      const resultsList5Star = document.getElementById('resultsList5Star');
+      const resultsList45Star = document.getElementById('resultsList45Star');
+
+      const adminSummaryText = document.getElementById('adminSummaryText');
+      const adminStartPickBtn = document.getElementById('adminStartPickBtn');
+      const adminRevealBtn = document.getElementById('adminRevealBtn');
+      const adminResetBtn = document.getElementById('adminResetBtn');
+      const adminPlayers5Star = document.getElementById('adminPlayers5Star');
+      const adminPlayers45Star = document.getElementById('adminPlayers45Star');
+      const adminPlayers5Input = document.getElementById('adminPlayers5Input');
+      const adminPlayers45Input = document.getElementById('adminPlayers45Input');
+      const adminPool5Input = document.getElementById('adminPool5Input');
+      const adminPool45Input = document.getElementById('adminPool45Input');
+      const pool5CountHint = document.getElementById('pool5CountHint');
+      const pool45CountHint = document.getElementById('pool45CountHint');
+      const adminSavePoolsBtn = document.getElementById('adminSavePoolsBtn');
+
+      // --- Sekme Değiştirme ---
+      function switchTab(tabName) {
+        activeTab = tabName;
+        const mapping = [
+          { name: 'player', btn: tabBtnPlayer, content: tabContentPlayer },
+          { name: 'status', btn: tabBtnStatus, content: tabContentStatus },
+          { name: 'results', btn: tabBtnResults, content: tabContentResults },
+          { name: 'admin', btn: tabBtnAdmin, content: tabContentAdmin }
+        ];
+        mapping.forEach(function (item) {
+          if (item.name === tabName) {
+            item.btn.classList.add('active');
+            item.content.classList.remove('hidden');
+          } else {
+            item.btn.classList.remove('active');
+            item.content.classList.add('hidden');
+          }
+        });
+        updateStickyBarVisibility();
+      }
+
+      tabBtnPlayer.addEventListener('click', function () { switchTab('player'); });
+      tabBtnStatus.addEventListener('click', function () { switchTab('status'); });
+      tabBtnResults.addEventListener('click', function () { switchTab('results'); });
+      tabBtnAdmin.addEventListener('click', function () { switchTab('admin'); });
+      goToResultsBtn.addEventListener('click', function () { switchTab('results'); });
+
+      // --- Kategori Seçimi ---
+      selectCat5Btn.addEventListener('click', function () {
+        selectedJoinGroup = '5star';
+        selectCat5Btn.classList.add('selected');
+        selectCat45Btn.classList.remove('selected');
+        renderJoinSection();
+      });
+
+      selectCat45Btn.addEventListener('click', function () {
+        selectedJoinGroup = '4.5star';
+        selectCat45Btn.classList.add('selected');
+        selectCat5Btn.classList.remove('selected');
+        renderJoinSection();
+      });
+
+      // --- Oyuncu İsim Seçme (Katılım) ---
+      async function claimPlayerName(groupKey, name) {
+        const res = await apiRequest('/api/claim', 'POST', {
+          group: groupKey,
+          name: name,
+          token: playerToken
+        });
+        if (!res.ok) {
+          showToast(res.data.error || 'İsim seçilemedi.', 'error');
+          await fetchState();
           return;
         }
-        try {
-          const r = await api('/api/admin/reset', 'POST');
-          resetArmed = false; resBtn.textContent = 'Baştan Başla';
-          appState = r.state; draftPicks = []; isEditingPicks = false;
-          showAlert('Turnuva sıfırlandı.', 'success'); render();
-        } catch (e) { showAlert(e.message); }
-      };
-    }
+        playerToken = res.data.token;
+        safeSetStorage(STORAGE_KEYS.PLAYER_TOKEN, playerToken);
+        draftPicks = [];
+        isEditingSubmittedPicks = false;
+        showSealedPicks = false;
+        showToast(name + ' olarak turnuvaya katıldın!', 'success');
+        if (res.data.state) {
+          applyServerState(res.data.state);
+        } else {
+          await fetchState();
+        }
+      }
 
-    initTheme();
-    checkAdminParam();
-    initEvents();
-    fetchState();
-    setInterval(fetchState, 4000);
+      // --- "Ben değilim" (İsmi Bırakma) ---
+      leaveNameBtn.addEventListener('click', async function () {
+        const res = await apiRequest('/api/leave', 'POST', { token: playerToken });
+        if (!res.ok) {
+          showToast(res.data.error || 'İsim bırakılamadı.', 'error');
+          return;
+        }
+        playerToken = '';
+        safeSetStorage(STORAGE_KEYS.PLAYER_TOKEN, null);
+        draftPicks = [];
+        isEditingSubmittedPicks = false;
+        showSealedPicks = false;
+        showToast('İsim seçimin kaldırıldı.', 'info');
+        if (res.data.state) {
+          applyServerState(res.data.state);
+        } else {
+          await fetchState();
+        }
+      });
+
+      // --- Takım Seçim Etkileşimi ---
+      function toggleTeamInDraft(teamName, maxAllowed) {
+        const idx = draftPicks.indexOf(teamName);
+        if (idx !== -1) {
+          draftPicks.splice(idx, 1);
+        } else {
+          if (draftPicks.length >= maxAllowed) {
+            showToast('En fazla ' + maxAllowed + ' takım seçebilirsin. Başka bir takım seçmek için önce seçili olanlardan birini kaldır.', 'error');
+            return;
+          }
+          draftPicks.push(teamName);
+        }
+        renderPickEditor();
+        updateStickyBarVisibility();
+      }
+
+      clearDraftPicksBtn.addEventListener('click', function () {
+        draftPicks = [];
+        renderPickEditor();
+        updateStickyBarVisibility();
+      });
+
+      toggleShowSealedBtn.addEventListener('click', function () {
+        showSealedPicks = !showSealedPicks;
+        renderSealedCard();
+      });
+
+      editSubmittedPicksBtn.addEventListener('click', function () {
+        if (!serverState || !serverState.me) return;
+        draftPicks = Array.isArray(serverState.me.picks) ? serverState.me.picks.slice() : [];
+        isEditingSubmittedPicks = true;
+        renderPlayerTab();
+        updateStickyBarVisibility();
+      });
+
+      cancelEditPicksBtn.addEventListener('click', function () {
+        isEditingSubmittedPicks = false;
+        draftPicks = [];
+        renderPlayerTab();
+        updateStickyBarVisibility();
+      });
+
+      // --- Tercihleri Gönderme ---
+      submitPicksBtn.addEventListener('click', async function () {
+        if (!serverState || !serverState.me) return;
+        const k = serverState.me.requiredPicks;
+        if (draftPicks.length !== k) {
+          showToast('Tam olarak ' + k + ' takım seçmelisin.', 'error');
+          return;
+        }
+        submitPicksBtn.disabled = true;
+        const res = await apiRequest('/api/pick', 'POST', {
+          token: playerToken,
+          picks: draftPicks
+        });
+        if (!res.ok) {
+          showToast(res.data.error || 'Tercihler gönderilemedi.', 'error');
+          submitPicksBtn.disabled = false;
+          return;
+        }
+        isEditingSubmittedPicks = false;
+        showSealedPicks = false;
+        showToast('Tercihlerin başarıyla mühürlendi ve gönderildi!', 'success');
+        if (res.data.state) {
+          applyServerState(res.data.state);
+        } else {
+          await fetchState();
+        }
+      });
+
+      // --- Yönetici İşlemleri ---
+      adminStartPickBtn.addEventListener('click', async function () {
+        // Eğer metin kutularında kaydedilmemiş değişiklik varsa önce kaydet
+        if (adminPoolsDirty && serverState && serverState.phase === 'prep') {
+          const saved = await saveAdminPoolsInternal(true);
+          if (!saved) return;
+        }
+        const res = await apiRequest('/api/admin/start', 'POST', { adminKey: adminKey });
+        if (!res.ok) {
+          showToast(res.data.error || 'Seçim başlatılamadı.', 'error');
+          return;
+        }
+        showToast('Seçim aşaması başlatıldı! Oyuncular tercihlerini girebilir.', 'success');
+        if (res.data.state) applyServerState(res.data.state);
+      });
+
+      async function executeReveal(requireAllPicked) {
+        const res = await apiRequest('/api/admin/reveal', 'POST', {
+          adminKey: adminKey,
+          requireAllPicked: requireAllPicked
+        });
+        if (res.status === 409 && res.data && res.data.needsConfirmation) {
+          const missingNames = (res.data.missingPlayers || [])
+            .map(function (m) { return m.name + ' (' + m.group + ')'; })
+            .join(', ');
+          openConfirmModal(
+            'Tercih Göndermeyen Oyuncular Var',
+            'Henüz tercih göndermeyen oyuncular var: ' + missingNames + '. Tercih göndermeyen kişiler takım alamayacak. Yine de seçimleri açıklamak istiyor musunuz?',
+            function () {
+              executeReveal(false);
+            }
+          );
+          return;
+        }
+        if (!res.ok) {
+          showToast(res.data.error || 'Seçimler açıklanamadı.', 'error');
+          return;
+        }
+        showToast('Seçimler açıklandı ve takımlar dağıtıldı!', 'success');
+        if (res.data.state) applyServerState(res.data.state);
+        switchTab('results');
+      }
+
+      adminRevealBtn.addEventListener('click', function () {
+        executeReveal(true);
+      });
+
+      // "Baştan başla" iki kez basılmalı
+      adminResetBtn.addEventListener('click', async function () {
+        const now = Date.now();
+        if (now < resetArmedUntil) {
+          resetArmedUntil = 0;
+          if (resetArmTimer) clearTimeout(resetArmTimer);
+          adminResetBtn.textContent = '🔄 Baştan Başla';
+          const res = await apiRequest('/api/admin/reset', 'POST', { adminKey: adminKey });
+          if (!res.ok) {
+            showToast(res.data.error || 'Sıfırlama başarısız oldu.', 'error');
+            return;
+          }
+          draftPicks = [];
+          isEditingSubmittedPicks = false;
+          showSealedPicks = false;
+          adminPoolsDirty = false;
+          showToast('Turnuva sıfırlandı. Katılan isimler korundu, faz hazırlığa döndü.', 'success');
+          if (res.data.state) applyServerState(res.data.state);
+        } else {
+          resetArmedUntil = now + 4500;
+          adminResetBtn.textContent = '⚠️ Onaylamak İçin Tekrar Bas';
+          if (resetArmTimer) clearTimeout(resetArmTimer);
+          resetArmTimer = setTimeout(function () {
+            resetArmedUntil = 0;
+            adminResetBtn.textContent = '🔄 Baştan Başla';
+          }, 4500);
+        }
+      });
+
+      async function releasePlayerByAdmin(groupKey, playerName) {
+        const res = await apiRequest('/api/admin/release', 'POST', {
+          adminKey: adminKey,
+          group: groupKey,
+          name: playerName
+        });
+        if (!res.ok) {
+          showToast(res.data.error || 'İsim serbest bırakılamadı.', 'error');
+          return;
+        }
+        showToast(playerName + ' ismi serbest bırakıldı.', 'info');
+        if (res.data.state) applyServerState(res.data.state);
+      }
+
+      function parseLines(text) {
+        return String(text || '')
+          .split(/\r?\n/)
+          .map(function (s) { return s.trim(); })
+          .filter(function (s) { return s.length > 0; });
+      }
+
+      function updatePoolHints() {
+        const p5 = parseLines(adminPool5Input.value);
+        const p45 = parseLines(adminPool45Input.value);
+        const u5 = parseLines(adminPlayers5Input.value);
+        const u45 = parseLines(adminPlayers45Input.value);
+        pool5CountHint.textContent = p5.length + ' takım (Grupta ' + u5.length + ' oyuncu var, en az ' + u5.length + ' takım gerekli)';
+        pool45CountHint.textContent = p45.length + ' takım (Grupta ' + u45.length + ' oyuncu var, en az ' + u45.length + ' takım gerekli)';
+      }
+
+      [adminPool5Input, adminPool45Input, adminPlayers5Input, adminPlayers45Input].forEach(function (el) {
+        el.addEventListener('input', function () {
+          adminPoolsDirty = true;
+          updatePoolHints();
+        });
+      });
+
+      async function saveAdminPoolsInternal(silentSuccess) {
+        const pools = {
+          '5star': parseLines(adminPool5Input.value),
+          '4.5star': parseLines(adminPool45Input.value)
+        };
+        const players = {
+          '5star': parseLines(adminPlayers5Input.value),
+          '4.5star': parseLines(adminPlayers45Input.value)
+        };
+        const res = await apiRequest('/api/admin/pools', 'POST', {
+          adminKey: adminKey,
+          pools: pools,
+          players: players
+        });
+        if (!res.ok) {
+          showToast(res.data.error || 'Havuzlar kaydedilemedi.', 'error');
+          return false;
+        }
+        adminPoolsDirty = false;
+        if (!silentSuccess) {
+          showToast('Takım havuzları ve oyuncu listeleri güncellendi.', 'success');
+        }
+        if (res.data.state) applyServerState(res.data.state);
+        return true;
+      }
+
+      adminSavePoolsBtn.addEventListener('click', function () {
+        saveAdminPoolsInternal(false);
+      });
+
+      // --- Organizatör Anahtarı Modalı ---
+      const adminKeyModal = document.getElementById('adminKeyModal');
+      const adminKeyInput = document.getElementById('adminKeyInput');
+      const openAdminModalBtn = document.getElementById('openAdminModalBtn');
+      const adminModalCancelBtn = document.getElementById('adminModalCancelBtn');
+      const adminModalSaveBtn = document.getElementById('adminModalSaveBtn');
+
+      openAdminModalBtn.addEventListener('click', function () {
+        adminKeyInput.value = adminKey || '';
+        adminKeyModal.classList.add('open');
+        setTimeout(function () { adminKeyInput.focus(); }, 50);
+      });
+
+      adminModalCancelBtn.addEventListener('click', function () {
+        adminKeyModal.classList.remove('open');
+      });
+
+      adminModalSaveBtn.addEventListener('click', async function () {
+        const candidate = adminKeyInput.value.trim();
+        if (!candidate) {
+          adminKey = '';
+          safeSetStorage(STORAGE_KEYS.ADMIN_KEY, null);
+          adminKeyModal.classList.remove('open');
+          await fetchState();
+          return;
+        }
+        adminKey = candidate;
+        const res = await apiRequest('/api/admin/verify', 'POST', { adminKey: candidate });
+        if (!res.ok) {
+          adminKey = '';
+          safeSetStorage(STORAGE_KEYS.ADMIN_KEY, null);
+          showToast(res.data.error || 'Geçersiz yönetici anahtarı.', 'error');
+          return;
+        }
+        safeSetStorage(STORAGE_KEYS.ADMIN_KEY, candidate);
+        adminKeyModal.classList.remove('open');
+        showToast('Organizatör modu etkinleştirildi.', 'success');
+        if (res.data.state) applyServerState(res.data.state);
+        switchTab('admin');
+      });
+
+      // --- Arayüz Render Fonksiyonları ---
+      function renderHeaderAndTabs() {
+        if (!serverState) return;
+
+        // Faz rozeti
+        phaseBadge.className = 'phase-badge';
+        if (serverState.phase === 'prep') {
+          phaseBadge.classList.add('phase-prep');
+          phaseText.textContent = 'Hazırlık (Lobi)';
+        } else if (serverState.phase === 'pick') {
+          phaseBadge.classList.add('phase-pick');
+          phaseText.textContent = 'Tercihler Açık';
+        } else {
+          phaseBadge.classList.add('phase-reveal');
+          phaseText.textContent = 'Sonuçlar Açıklandı';
+        }
+
+        // Durum sayacı
+        const sum = serverState.summary || { totalPlayers: 10, claimedCount: 0, pickedCount: 0 };
+        statusBadgeCount.textContent = sum.pickedCount + '/' + sum.totalPlayers;
+        overallProgressPill.textContent =
+          sum.claimedCount + ' / ' + sum.totalPlayers + ' Katıldı • ' +
+          sum.pickedCount + ' / ' + sum.totalPlayers + ' Tercih Gönderdi';
+
+        // Sonuçlar sekmesi görünürlüğü (Açıklama öncesinde sonuçlar gizli)
+        if (serverState.phase === 'reveal' && serverState.results) {
+          tabBtnResults.classList.remove('hidden');
+        } else {
+          tabBtnResults.classList.add('hidden');
+          if (activeTab === 'results') {
+            switchTab('player');
+          }
+        }
+
+        // Yönetim sekmesi görünürlüğü
+        if (serverState.isAdmin || adminKey) {
+          tabBtnAdmin.classList.remove('hidden');
+        } else {
+          tabBtnAdmin.classList.add('hidden');
+          if (activeTab === 'admin') {
+            switchTab('player');
+          }
+        }
+
+        // Kimlik bandı
+        if (serverState.me) {
+          identityBanner.classList.remove('hidden');
+          myAvatar.textContent = serverState.me.name.slice(0, 1).toLocaleUpperCase('tr-TR');
+          myNameDisplay.textContent = serverState.me.name + ' (' + serverState.me.groupLabel + ')';
+          myRoleDisplay.textContent =
+            'Grup Sırası: ' + serverState.me.order + '. sıra • Seçilecek Takım Sayısı: ' + serverState.me.requiredPicks;
+
+          // Tercih gönderdikten sonra veya sonuçlar açıklandıktan sonra "Ben değilim" devre dışı
+          if (serverState.me.hasPicked || serverState.phase === 'reveal') {
+            leaveNameBtn.classList.add('hidden');
+          } else {
+            leaveNameBtn.classList.remove('hidden');
+          }
+        } else {
+          identityBanner.classList.add('hidden');
+        }
+      }
+
+      function renderJoinSection() {
+        if (!serverState) return;
+        const g5 = serverState.groups['5star'];
+        const g45 = serverState.groups['4.5star'];
+        cat5CountPill.textContent = g5.players.length + ' Kişi';
+        cat45CountPill.textContent = g45.players.length + ' Kişi';
+
+        const activeGroup = serverState.groups[selectedJoinGroup];
+        joinGroupTitle.textContent = activeGroup.label + ' Oyuncuları (Sırayla)';
+        joinPlayerGrid.innerHTML = '';
+
+        activeGroup.players.forEach(function (p) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'player-name-btn';
+          btn.disabled = p.claimed || serverState.phase === 'reveal';
+
+          const topDiv = document.createElement('div');
+          topDiv.className = 'p-top';
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = p.name;
+          const ordSpan = document.createElement('span');
+          ordSpan.className = 'order-pill';
+          ordSpan.textContent = p.order + '. Sıra (' + p.requiredPicks + ' Takım)';
+          topDiv.appendChild(nameSpan);
+          topDiv.appendChild(ordSpan);
+
+          const subDiv = document.createElement('div');
+          subDiv.className = 'p-sub';
+          if (p.claimed) {
+            subDiv.textContent = '🔒 Bu isim alındı';
+          } else if (serverState.phase === 'reveal') {
+            subDiv.textContent = 'Turnuva tamamlandı';
+          } else {
+            subDiv.textContent = 'Seçmek için dokun →';
+          }
+
+          btn.appendChild(topDiv);
+          btn.appendChild(subDiv);
+
+          btn.addEventListener('click', function () {
+            claimPlayerName(selectedJoinGroup, p.name);
+          });
+
+          joinPlayerGrid.appendChild(btn);
+        });
+      }
+
+      function renderPickEditor() {
+        if (!serverState || !serverState.me) return;
+        const me = serverState.me;
+        const groupObj = serverState.groups[me.group];
+        const k = me.requiredPicks;
+
+        // Havuzdan silinmiş takım varsa taslaktan temizle
+        draftPicks = draftPicks.filter(function (t) {
+          return groupObj.pool.indexOf(t) !== -1;
+        });
+
+        pickEditorTitle.textContent = me.name + ' — Takım Tercihlerini Seç (' + groupObj.label + ')';
+        pickEditorSubtitle.textContent =
+          'Grubunda ' + me.order + '. sıradasın. Tam olarak ' + k +
+          ' takım seçmelisin. İlk seçtiğin takım 1. tercihin olur.';
+
+        // Seçilen chipler
+        draftSelectedChips.innerHTML = '';
+        if (draftPicks.length === 0) {
+          const emptyHint = document.createElement('span');
+          emptyHint.className = 'form-hint';
+          emptyHint.textContent = 'Henüz takım seçmedin. Aşağıdaki listeden sırasıyla ' + k + ' takım seç.';
+          draftSelectedChips.appendChild(emptyHint);
+        } else {
+          draftPicks.forEach(function (team, idx) {
+            const chip = document.createElement('span');
+            chip.className = 'selected-chip';
+            chip.title = 'Kaldırmak için tıkla';
+
+            const num = document.createElement('span');
+            num.className = 'chip-num';
+            num.textContent = (idx + 1) + '. Tercih';
+
+            const txt = document.createElement('span');
+            txt.textContent = team + ' ✕';
+
+            chip.appendChild(num);
+            chip.appendChild(txt);
+            chip.addEventListener('click', function () {
+              toggleTeamInDraft(team, k);
+            });
+            draftSelectedChips.appendChild(chip);
+          });
+        }
+
+        // Havuz ızgarası
+        poolGridHeader.textContent = groupObj.label + ' Takım Havuzu (' + groupObj.pool.length + ' Takım)';
+        teamsPoolGrid.innerHTML = '';
+
+        groupObj.pool.forEach(function (team) {
+          const selectedIdx = draftPicks.indexOf(team);
+          const isSelected = selectedIdx !== -1;
+
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'team-card' + (isSelected ? ' selected' : '');
+
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = team;
+
+          const badge = document.createElement('span');
+          badge.className = 'team-rank-badge';
+          badge.textContent = isSelected ? (selectedIdx + 1) + '.' : '+';
+
+          card.appendChild(nameSpan);
+          card.appendChild(badge);
+
+          card.addEventListener('click', function () {
+            toggleTeamInDraft(team, k);
+          });
+
+          teamsPoolGrid.appendChild(card);
+        });
+      }
+
+      function renderSealedCard() {
+        if (!serverState || !serverState.me) return;
+        const me = serverState.me;
+
+        if (serverState.phase === 'pick') {
+          editSubmittedPicksBtn.classList.remove('hidden');
+        } else {
+          editSubmittedPicksBtn.classList.add('hidden');
+        }
+
+        if (showSealedPicks) {
+          toggleShowSealedBtn.textContent = '🙈 Tercihlerimi Gizle';
+          mySealedPicksList.classList.remove('hidden');
+          mySealedPicksList.innerHTML = '';
+          (me.picks || []).forEach(function (team, idx) {
+            const item = document.createElement('div');
+            item.className = 'sealed-item';
+
+            const badge = document.createElement('span');
+            badge.className = 'pill pill-blue';
+            badge.textContent = (idx + 1) + '. Tercih';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = team;
+
+            item.appendChild(badge);
+            item.appendChild(nameSpan);
+            mySealedPicksList.appendChild(item);
+          });
+        } else {
+          toggleShowSealedBtn.textContent = '👁️ Tercihlerimi Göster';
+          mySealedPicksList.classList.add('hidden');
+        }
+      }
+
+      function renderPlayerTab() {
+        if (!serverState) return;
+        const me = serverState.me;
+
+        if (!me) {
+          joinSection.classList.remove('hidden');
+          playerWorkspaceSection.classList.add('hidden');
+          renderJoinSection();
+          updateStickyBarVisibility();
+          return;
+        }
+
+        joinSection.classList.add('hidden');
+        playerWorkspaceSection.classList.remove('hidden');
+
+        prepWaitingCard.classList.add('hidden');
+        pickEditorCard.classList.add('hidden');
+        sealedPicksCard.classList.add('hidden');
+        revealNoticeCard.classList.add('hidden');
+
+        const groupObj = serverState.groups[me.group];
+
+        if (serverState.phase === 'prep') {
+          prepWaitingCard.classList.remove('hidden');
+          prepWaitingDesc.textContent =
+            'Merhaba ' + me.name + '! ' + groupObj.label + ' içinde ' + me.order +
+            '. sıradasın. Organizatör “Seçimi başlat” dediğinde tam olarak ' +
+            me.requiredPicks + ' takım tercih edeceksin.';
+          prepPoolPreviewTitle.textContent = groupObj.label + ' Takım Havuzu (' + groupObj.pool.length + ' Takım)';
+          prepPoolPreviewChips.innerHTML = '';
+          groupObj.pool.forEach(function (team) {
+            const pill = document.createElement('span');
+            pill.className = 'pill pill-muted';
+            pill.style.padding = '5px 10px';
+            pill.textContent = team;
+            prepPoolPreviewChips.appendChild(pill);
+          });
+        } else if (serverState.phase === 'pick') {
+          if (me.hasPicked && !isEditingSubmittedPicks) {
+            sealedPicksCard.classList.remove('hidden');
+            renderSealedCard();
+          } else {
+            pickEditorCard.classList.remove('hidden');
+            renderPickEditor();
+          }
+        } else if (serverState.phase === 'reveal') {
+          revealNoticeCard.classList.remove('hidden');
+          if (me.hasPicked) {
+            sealedPicksCard.classList.remove('hidden');
+            renderSealedCard();
+          }
+        }
+
+        updateStickyBarVisibility();
+      }
+
+      function updateStickyBarVisibility() {
+        if (!serverState || !serverState.me) {
+          stickyBottomBar.classList.add('hidden');
+          return;
+        }
+        const me = serverState.me;
+        const inPickEditor =
+          activeTab === 'player' &&
+          serverState.phase === 'pick' &&
+          (!me.hasPicked || isEditingSubmittedPicks);
+
+        if (!inPickEditor) {
+          stickyBottomBar.classList.add('hidden');
+          return;
+        }
+
+        stickyBottomBar.classList.remove('hidden');
+        const k = me.requiredPicks;
+        const count = draftPicks.length;
+        stickySelectionCountText.textContent = count + ' / ' + k + ' takım seçildi';
+
+        if (count === k) {
+          stickySelectionHint.className = 'pill pill-success';
+          stickySelectionHint.textContent = 'Göndermeye hazır';
+          submitPicksBtn.disabled = false;
+        } else {
+          stickySelectionHint.className = 'pill pill-warn';
+          stickySelectionHint.textContent = (k - count) + ' takım daha seçmelisin';
+          submitPicksBtn.disabled = true;
+        }
+
+        if (isEditingSubmittedPicks) {
+          cancelEditPicksBtn.classList.remove('hidden');
+        } else {
+          cancelEditPicksBtn.classList.add('hidden');
+        }
+      }
+
+      function renderStatusTab() {
+        if (!serverState) return;
+        [
+          { key: '5star', container: statusList5Star },
+          { key: '4.5star', container: statusList45Star }
+        ].forEach(function (item) {
+          const g = serverState.groups[item.key];
+          item.container.innerHTML = '';
+          g.players.forEach(function (p) {
+            const row = document.createElement('div');
+            row.className = 'status-row';
+
+            const left = document.createElement('div');
+            left.className = 'status-left';
+            const ord = document.createElement('span');
+            ord.className = 'order-pill';
+            ord.textContent = p.order + '. Sıra (' + p.requiredPicks + ' tercih)';
+            const nm = document.createElement('strong');
+            nm.textContent = p.name;
+            left.appendChild(ord);
+            left.appendChild(nm);
+
+            const badges = document.createElement('div');
+            badges.className = 'status-badges';
+
+            const claimBadge = document.createElement('span');
+            claimBadge.className = 'pill ' + (p.claimed ? 'pill-blue' : 'pill-muted');
+            claimBadge.textContent = p.claimed ? 'Katıldı' : 'İsim Alınmadı';
+
+            const pickBadge = document.createElement('span');
+            pickBadge.className = 'pill ' + (p.hasPicked ? 'pill-success' : 'pill-warn');
+            pickBadge.textContent = p.hasPicked ? 'Tercihini gönderdi' : 'Bekliyor';
+
+            badges.appendChild(claimBadge);
+            badges.appendChild(pickBadge);
+
+            row.appendChild(left);
+            row.appendChild(badges);
+            item.container.appendChild(row);
+          });
+        });
+      }
+
+      function renderResultsTab() {
+        if (!serverState || serverState.phase !== 'reveal' || !serverState.results) return;
+        [
+          { key: '5star', container: resultsList5Star },
+          { key: '4.5star', container: resultsList45Star }
+        ].forEach(function (item) {
+          const gRes = serverState.results.groups[item.key];
+          item.container.innerHTML = '';
+          if (!gRes || !Array.isArray(gRes.allocations)) return;
+
+          gRes.allocations.forEach(function (alloc) {
+            const card = document.createElement('div');
+            card.className = 'result-row';
+
+            const top = document.createElement('div');
+            top.className = 'result-top';
+
+            const left = document.createElement('div');
+            left.className = 'status-left';
+            const ord = document.createElement('span');
+            ord.className = 'order-pill';
+            ord.textContent = alloc.order + '. Sıra';
+            const nm = document.createElement('strong');
+            nm.textContent = alloc.name;
+            left.appendChild(ord);
+            left.appendChild(nm);
+
+            const right = document.createElement('div');
+            if (alloc.assignedTeam) {
+              const badge = document.createElement('span');
+              badge.className = 'assigned-team-badge';
+              badge.textContent = '⚽ ' + alloc.assignedTeam + ' (' + alloc.assignedPreferenceRank + '. Tercihi)';
+              right.appendChild(badge);
+            } else {
+              const noBadge = document.createElement('span');
+              noBadge.className = 'no-team-badge';
+              noBadge.textContent = 'Tercih Göndermedi — Takım Almadı';
+              right.appendChild(noBadge);
+            }
+
+            top.appendChild(left);
+            top.appendChild(right);
+            card.appendChild(top);
+
+            const prefWrap = document.createElement('div');
+            prefWrap.className = 'pref-breakdown';
+            if (!alloc.preferences || alloc.preferences.length === 0) {
+              const noneSpan = document.createElement('span');
+              noneSpan.className = 'form-hint';
+              noneSpan.textContent = 'Tercih listesi gönderilmedi.';
+              prefWrap.appendChild(noneSpan);
+            } else {
+              alloc.preferences.forEach(function (pref) {
+                const pEl = document.createElement('span');
+                pEl.className = 'pref-item ' + pref.status;
+                if (pref.status === 'assigned') {
+                  pEl.textContent = pref.rank + '. ' + pref.team + ' ✓';
+                } else if (pref.status === 'taken') {
+                  pEl.textContent = pref.rank + '. ' + pref.team + (pref.takenBy ? ' (' + pref.takenBy + ' aldı)' : '');
+                } else {
+                  pEl.textContent = pref.rank + '. ' + pref.team;
+                }
+                prefWrap.appendChild(pEl);
+              });
+            }
+
+            card.appendChild(prefWrap);
+            item.container.appendChild(card);
+          });
+        });
+      }
+
+      function renderAdminTab() {
+        if (!serverState) return;
+        const sum = serverState.summary || { totalPlayers: 10, claimedCount: 0, pickedCount: 0 };
+        adminSummaryText.textContent =
+          'Durum: ' + sum.claimedCount + ' / ' + sum.totalPlayers + ' oyuncu ismini aldı • ' +
+          sum.pickedCount + ' / ' + sum.totalPlayers + ' oyuncu tercihini gönderdi. (Tercihler gizlidir)';
+
+        adminStartPickBtn.disabled = serverState.phase !== 'prep';
+        adminRevealBtn.disabled = serverState.phase !== 'pick';
+        adminSavePoolsBtn.disabled = serverState.phase !== 'prep';
+
+        const isPrep = serverState.phase === 'prep';
+        adminPool5Input.disabled = !isPrep;
+        adminPool45Input.disabled = !isPrep;
+        adminPlayers5Input.disabled = !isPrep;
+        adminPlayers45Input.disabled = !isPrep;
+
+        if (!adminPoolsDirty) {
+          adminPool5Input.value = serverState.groups['5star'].pool.join('\n');
+          adminPool45Input.value = serverState.groups['4.5star'].pool.join('\n');
+          adminPlayers5Input.value = serverState.groups['5star'].players.map(function (p) { return p.name; }).join('\n');
+          adminPlayers45Input.value = serverState.groups['4.5star'].players.map(function (p) { return p.name; }).join('\n');
+          updatePoolHints();
+        }
+
+        [
+          { key: '5star', container: adminPlayers5Star },
+          { key: '4.5star', container: adminPlayers45Star }
+        ].forEach(function (item) {
+          const g = serverState.groups[item.key];
+          item.container.innerHTML = '';
+          g.players.forEach(function (p) {
+            const row = document.createElement('div');
+            row.className = 'status-row';
+
+            const left = document.createElement('div');
+            left.className = 'status-left';
+            const ord = document.createElement('span');
+            ord.className = 'order-pill';
+            ord.textContent = p.order + '.';
+            const nm = document.createElement('strong');
+            nm.textContent = p.name;
+            left.appendChild(ord);
+            left.appendChild(nm);
+
+            const right = document.createElement('div');
+            right.className = 'status-badges';
+
+            const claimBadge = document.createElement('span');
+            claimBadge.className = 'pill ' + (p.claimed ? 'pill-blue' : 'pill-muted');
+            claimBadge.textContent = p.claimed ? 'Katıldı' : 'Boş';
+
+            const pickBadge = document.createElement('span');
+            pickBadge.className = 'pill ' + (p.hasPicked ? 'pill-success' : 'pill-warn');
+            pickBadge.textContent = p.hasPicked ? 'Tercihini gönderdi' : 'Bekliyor';
+
+            right.appendChild(claimBadge);
+            right.appendChild(pickBadge);
+
+            if (p.claimed && serverState.phase !== 'reveal') {
+              const relBtn = document.createElement('button');
+              relBtn.type = 'button';
+              relBtn.className = 'btn btn-outline btn-sm';
+              relBtn.textContent = 'Serbest bırak';
+              relBtn.addEventListener('click', function () {
+                releasePlayerByAdmin(item.key, p.name);
+              });
+              right.appendChild(relBtn);
+            }
+
+            row.appendChild(left);
+            row.appendChild(right);
+            item.container.appendChild(row);
+          });
+        });
+      }
+
+      function applyServerState(nextState) {
+        const previousPhase = serverState ? serverState.phase : null;
+        serverState = nextState;
+
+        // Eğer sunucuda oyuncunun tokenı serbest bırakıldıysa yerel tokenı temizle
+        if (playerToken && !serverState.me) {
+          playerToken = '';
+          safeSetStorage(STORAGE_KEYS.PLAYER_TOKEN, null);
+          draftPicks = [];
+          isEditingSubmittedPicks = false;
+        }
+
+        // Faz 'reveal' olduğunda otomatik olarak Sonuçlar sekmesini göster
+        if (previousPhase && previousPhase !== 'reveal' && serverState.phase === 'reveal') {
+          activeTab = 'results';
+        }
+
+        renderHeaderAndTabs();
+        renderPlayerTab();
+        renderStatusTab();
+        renderResultsTab();
+        renderAdminTab();
+        switchTab(activeTab);
+      }
+
+      async function fetchState() {
+        const res = await apiRequest('/api/state', 'GET');
+        if (res.ok && res.data) {
+          applyServerState(res.data);
+        }
+      }
+
+      // İlk yükleme ve 4 saniyede bir otomatik yoklama (polling)
+      fetchState();
+      setInterval(fetchState, 4000);
+    })();
   </script>
 </body>
 </html>
