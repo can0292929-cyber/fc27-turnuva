@@ -28,6 +28,19 @@ const MAX_PLAYERS_PER_GROUP = 30;
 const ENV_ADMIN_KEY = typeof process.env.ADMIN_KEY === 'string' ? process.env.ADMIN_KEY.trim() : '';
 const ADMIN_KEY = ENV_ADMIN_KEY || crypto.randomBytes(16).toString('hex');
 
+// Bu sunucu sürecinin kimliği. İstemci, sunucunun yeniden başladığını bununla anlar.
+const BOOT_ID = crypto.randomBytes(6).toString('hex');
+
+// Kalıcı kayıt (isteğe bağlı): GIST_TOKEN ortam değişkeni verilirse tüm durum şifreli olarak
+// gizli bir GitHub Gist'ine de yazılır. Böylece sunucu uyuyup yeniden başlasa bile (Render'ın
+// ücretsiz planında yerel dosyalar her yeniden başlatmada silinir) kayıtlar geri yüklenir.
+const GIST_TOKEN = typeof process.env.GIST_TOKEN === 'string' ? process.env.GIST_TOKEN.trim() : '';
+const GIST_ID_ENV = typeof process.env.GIST_ID === 'string' ? process.env.GIST_ID.trim() : '';
+const GIST_DESCRIPTION = (process.env.GIST_NAME || 'fc27-turnuva-data').trim();
+const GIST_FILE = 'fc27-data.txt';
+const GIST_API = (process.env.GIST_API_URL || 'https://api.github.com').replace(/\/+$/, '');
+const GIST_TIMEOUT_MS = 10000;
+
 const DEFAULT_GROUPS = {
   '5star': {
     id: '5star',
@@ -84,25 +97,31 @@ const DEFAULT_GROUPS = {
   }
 };
 
+function makeDefaultGroup(key) {
+  const def = DEFAULT_GROUPS[key];
+  return {
+    id: def.id,
+    label: def.label,
+    subtitle: def.subtitle,
+    pool: [...def.pool],
+    players: def.players.map((name) => ({
+      name,
+      token: null,
+      clientId: null,
+      claimedAt: null,
+      picks: [],
+      pickedAt: null
+    }))
+  };
+}
+
 /**
  * Varsayılan başlangıç verisini oluşturur.
  */
 function createInitialData() {
   const groups = {};
-  for (const [key, def] of Object.entries(DEFAULT_GROUPS)) {
-    groups[key] = {
-      id: def.id,
-      label: def.label,
-      subtitle: def.subtitle,
-      pool: [...def.pool],
-      players: def.players.map((name) => ({
-        name,
-        token: null,
-        claimedAt: null,
-        picks: [],
-        pickedAt: null
-      }))
-    };
+  for (const key of Object.keys(DEFAULT_GROUPS)) {
+    groups[key] = makeDefaultGroup(key);
   }
   return {
     version: 1,
@@ -127,69 +146,400 @@ function saveDataAtomic(data) {
     dir,
     `.data.json.tmp.${process.pid}.${Date.now()}.${crypto.randomBytes(4).toString('hex')}`
   );
-  fs.writeFileSync(tmpFile, serialized, { encoding: 'utf8', mode: 0o600 });
-  fs.renameSync(tmpFile, DATA_FILE);
+  try {
+    fs.writeFileSync(tmpFile, serialized, { encoding: 'utf8', mode: 0o600 });
+    fs.renameSync(tmpFile, DATA_FILE);
+  } catch (err) {
+    try {
+      fs.unlinkSync(tmpFile);
+    } catch (_e) {
+      // geçici dosya zaten yok
+    }
+    throw err;
+  }
 }
+
+/**
+ * Yerel dosyaya yazar; yazamazsa sunucuyu düşürmez, yalnızca uyarı basar.
+ */
+function trySaveLocal(data) {
+  try {
+    saveDataAtomic(data);
+    return true;
+  } catch (err) {
+    console.error('[UYARI] data.json yazılamadı:', err.message);
+    return false;
+  }
+}
+
+/**
+ * Dosyadan veya buluttan okunan veriyi doğrular, eksikleri tamamlar.
+ * Yapı geçersizse hata fırlatır.
+ */
+function normalizeData(parsed) {
+  if (!parsed || typeof parsed !== 'object' || !parsed.groups || typeof parsed.groups !== 'object') {
+    throw new Error('Geçersiz veri yapısı');
+  }
+  if (!['prep', 'pick', 'reveal'].includes(parsed.phase)) {
+    parsed.phase = 'prep';
+  }
+  for (const key of ['5star', '4.5star']) {
+    const def = DEFAULT_GROUPS[key];
+    const g = parsed.groups[key];
+    if (!g || typeof g !== 'object') {
+      parsed.groups[key] = makeDefaultGroup(key);
+      continue;
+    }
+    g.id = def.id;
+    g.label = typeof g.label === 'string' && g.label ? g.label : def.label;
+    g.subtitle = typeof g.subtitle === 'string' ? g.subtitle : def.subtitle;
+    g.pool = Array.isArray(g.pool)
+      ? g.pool.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim())
+      : [...def.pool];
+    g.players = Array.isArray(g.players)
+      ? g.players
+          .filter((p) => p && typeof p === 'object')
+          .map((p) => ({
+            name: String(p.name || '').trim(),
+            token: typeof p.token === 'string' && p.token ? p.token : null,
+            clientId: typeof p.clientId === 'string' && p.clientId ? p.clientId : null,
+            claimedAt: p.claimedAt || null,
+            picks: Array.isArray(p.picks) ? p.picks.filter((t) => typeof t === 'string') : [],
+            pickedAt: p.pickedAt || null
+          }))
+      : [];
+  }
+  const hasResults =
+    parsed.results && typeof parsed.results === 'object' && parsed.results.groups;
+  if (parsed.phase === 'reveal' && !hasResults) {
+    // Sonuçlar kayıpsa açıklama yeniden yapılabilsin.
+    parsed.phase = 'pick';
+  }
+  if (parsed.phase !== 'reveal') {
+    parsed.results = null;
+  }
+  if (typeof parsed.updatedAt !== 'string') {
+    parsed.updatedAt = new Date().toISOString();
+  }
+  return parsed;
+}
+
+// Açılışta yerel kayıt bulunamadıysa (ör. Render yeniden başlatması) true olur.
+let localWasMissing = false;
 
 /**
  * Diskten veriyi okur veya yoksa oluşturur.
  */
 function loadData() {
-  if (!fs.existsSync(DATA_FILE)) {
-    const initial = createInitialData();
-    saveDataAtomic(initial);
-    return initial;
+  if (fs.existsSync(DATA_FILE)) {
+    try {
+      return normalizeData(JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')));
+    } catch (err) {
+      console.error('[UYARI] data.json okunamadı, varsayılan veriyle başlatılıyor:', err.message);
+    }
   }
-  try {
-    const raw = fs.readFileSync(DATA_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || !parsed.groups) {
-      throw new Error('Geçersiz data.json yapısı');
-    }
-    if (!['prep', 'pick', 'reveal'].includes(parsed.phase)) {
-      parsed.phase = 'prep';
-    }
-    for (const key of ['5star', '4.5star']) {
-      if (!parsed.groups[key]) {
-        const def = DEFAULT_GROUPS[key];
-        parsed.groups[key] = {
-          id: def.id,
-          label: def.label,
-          subtitle: def.subtitle,
-          pool: [...def.pool],
-          players: def.players.map((name) => ({
-            name,
-            token: null,
-            claimedAt: null,
-            picks: [],
-            pickedAt: null
-          }))
-        };
-      } else {
-        parsed.groups[key].pool = Array.isArray(parsed.groups[key].pool)
-          ? parsed.groups[key].pool
-          : [...DEFAULT_GROUPS[key].pool];
-        parsed.groups[key].players = Array.isArray(parsed.groups[key].players)
-          ? parsed.groups[key].players.map((p) => ({
-              name: String(p.name || '').trim(),
-              token: typeof p.token === 'string' && p.token ? p.token : null,
-              claimedAt: p.claimedAt || null,
-              picks: Array.isArray(p.picks) ? p.picks : [],
-              pickedAt: p.pickedAt || null
-            }))
-          : [];
-      }
-    }
-    return parsed;
-  } catch (err) {
-    console.error('[UYARI] data.json okunamadı, varsayılan veriyle başlatılıyor:', err.message);
-    const initial = createInitialData();
-    saveDataAtomic(initial);
-    return initial;
-  }
+  localWasMissing = true;
+  const initial = createInitialData();
+  trySaveLocal(initial);
+  return initial;
 }
 
 let state = loadData();
+let changedSinceBoot = false;
+
+/**
+ * Durumu kaydeder: önce yerel dosyaya, ardından (açıksa) buluta.
+ * Kayıt hatası isteği başarısız yapmaz; durum bellekte güncel kalır.
+ */
+function persistState() {
+  changedSinceBoot = true;
+  if (!trySaveLocal(state)) {
+    state.updatedAt = new Date().toISOString();
+  }
+  scheduleRemoteSave();
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// ---------------------------------------------------------------------------
+// Kalıcı kayıt (isteğe bağlı): şifreli durum, gizli bir GitHub Gist'inde tutulur.
+// ---------------------------------------------------------------------------
+const gist = {
+  enabled: Boolean(GIST_TOKEN) && typeof fetch === 'function',
+  id: GIST_ID_ENV || null,
+  ready: false, // bulut kaydıyla ilk eşitleme tamamlandı mı
+  dirty: false, // buluta yazılmayı bekleyen değişiklik var mı
+  saving: false,
+  timer: null,
+  retryTimer: null,
+  failCount: 0,
+  lastSavedAt: null,
+  lastError: null,
+  writeTimes: []
+};
+
+// false iken API "sunucu açılıyor" yanıtı verir: bulut kaydı yüklenmeden işlem yapılmaz.
+let storageReady = !gist.enabled;
+let shuttingDown = false;
+
+/**
+ * Organizatöre gösterilen kayıt durumu.
+ * mode: 'gist' (bulut), 'file' (kalıcı dosya), 'ephemeral' (yeniden başlatmada silinir)
+ */
+function storageInfo() {
+  if (gist.enabled) {
+    return {
+      mode: 'gist',
+      ready: gist.ready,
+      pending: gist.dirty || gist.saving,
+      lastSavedAt: gist.lastSavedAt,
+      error: gist.lastError
+    };
+  }
+  const ephemeral = Boolean(process.env.RENDER) && !process.env.DATA_FILE;
+  return {
+    mode: ephemeral ? 'ephemeral' : 'file',
+    error: GIST_TOKEN ? 'Bu Node sürümü bulut kaydını desteklemiyor (Node 18 veya üstü gerekli).' : null
+  };
+}
+
+function gistCryptoKey() {
+  return crypto.createHash('sha256').update('fc27-data-v1:' + GIST_TOKEN, 'utf8').digest();
+}
+
+/** Durumu AES-256-GCM ile şifreler; Gist'i açan biri tercihleri okuyamaz. */
+function sealData(data) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', gistCryptoKey(), iv);
+  const enc = Buffer.concat([cipher.update(JSON.stringify(data), 'utf8'), cipher.final()]);
+  return 'fc27v1:' + Buffer.concat([iv, cipher.getAuthTag(), enc]).toString('base64');
+}
+
+function openData(text) {
+  const raw = String(text || '').trim();
+  if (!raw.startsWith('fc27v1:')) {
+    throw new Error('Tanınmayan kayıt biçimi');
+  }
+  const buf = Buffer.from(raw.slice(7), 'base64');
+  if (buf.length < 29) {
+    throw new Error('Kayıt eksik');
+  }
+  const decipher = crypto.createDecipheriv('aes-256-gcm', gistCryptoKey(), buf.subarray(0, 12));
+  decipher.setAuthTag(buf.subarray(12, 28));
+  const plain = Buffer.concat([decipher.update(buf.subarray(28)), decipher.final()]);
+  return JSON.parse(plain.toString('utf8'));
+}
+
+async function gistRequest(method, apiPath, body) {
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    Authorization: 'Bearer ' + GIST_TOKEN,
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'fc27-turnuva'
+  };
+  if (body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(GIST_API + apiPath, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(GIST_TIMEOUT_MS)
+  });
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (_e) {
+    data = null;
+  }
+  if (!res.ok) {
+    const detail = (data && data.message) || text.slice(0, 120) || 'yanıt yok';
+    const err = new Error(`GitHub ${res.status}: ${detail}`);
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+/** Bu uygulamaya ait Gist'i açıklamasından bulur. Yoksa null döner. */
+async function gistFindId() {
+  if (gist.id) return gist.id;
+  for (let page = 1; page <= 10; page++) {
+    const list = await gistRequest('GET', `/gists?per_page=100&page=${page}`);
+    if (!Array.isArray(list) || list.length === 0) break;
+    const hit = list.find(
+      (g) => g && g.description === GIST_DESCRIPTION && g.files && g.files[GIST_FILE]
+    );
+    if (hit && hit.id) {
+      gist.id = String(hit.id);
+      return gist.id;
+    }
+    if (list.length < 100) break;
+  }
+  return null;
+}
+
+async function gistFetchRemote() {
+  const id = await gistFindId();
+  if (!id) return { data: null };
+  let doc;
+  try {
+    doc = await gistRequest('GET', '/gists/' + encodeURIComponent(id));
+  } catch (err) {
+    if (err.status === 404 && !GIST_ID_ENV) {
+      gist.id = null; // Gist silinmiş: yenisi oluşturulacak
+      return { data: null };
+    }
+    throw err;
+  }
+  const file = doc && doc.files && doc.files[GIST_FILE];
+  if (!file || typeof file.content !== 'string') return { data: null };
+  try {
+    return { data: normalizeData(openData(file.content)) };
+  } catch (err) {
+    return { data: null, unreadable: err.message };
+  }
+}
+
+/**
+ * Bulut kaydıyla eşitler. Sunucu boş açıldıysa buluttaki kayıt geri yüklenir;
+ * yerelde daha yeni veri varsa buluta yazılır. Ulaşılamazsa hata fırlatır.
+ */
+async function gistSync() {
+  const remote = await gistFetchRemote();
+  if (remote.data) {
+    const remoteTime = Date.parse(remote.data.updatedAt) || 0;
+    const localTime = Date.parse(state.updatedAt) || 0;
+    const localHasRealData = changedSinceBoot || !localWasMissing;
+    if (!localHasRealData || (!changedSinceBoot && remoteTime >= localTime)) {
+      state = remote.data;
+      try {
+        fs.writeFileSync(DATA_FILE, JSON.stringify(state, null, 2), { encoding: 'utf8', mode: 0o600 });
+      } catch (_e) {
+        // yerel kopya yazılamazsa bellekteki durum yeterli
+      }
+      console.log(`[KAYIT] Buluttaki kayıt geri yüklendi (son değişiklik: ${state.updatedAt}).`);
+    } else {
+      gist.dirty = true;
+      console.log('[KAYIT] Yereldeki kayıt daha yeni; buluta yazılacak.');
+    }
+  } else {
+    gist.dirty = true;
+    if (remote.unreadable) {
+      console.error(
+        '[UYARI] Buluttaki kayıt çözülemedi (GIST_TOKEN değişmiş olabilir); üzerine yazılacak:',
+        remote.unreadable
+      );
+    }
+  }
+  gist.ready = true;
+  gist.lastError = null;
+  gist.failCount = 0;
+  if (gist.dirty) scheduleRemoteSave(0);
+}
+
+function scheduleGistRetry() {
+  if (gist.retryTimer || shuttingDown) return;
+  const delay = Math.min(300000, 30000 * 2 ** Math.min(gist.failCount, 4));
+  gist.retryTimer = setTimeout(async () => {
+    gist.retryTimer = null;
+    try {
+      await gistSync();
+    } catch (err) {
+      gist.failCount++;
+      gist.lastError = err.message;
+      console.error('[KAYIT] Bulut kaydına hâlâ ulaşılamıyor:', err.message);
+      scheduleGistRetry();
+    }
+  }, delay);
+}
+
+/** Açılışta bulut kaydını yükler; bu bitene kadar API istekleri bekletilir. */
+async function initStorage() {
+  if (!gist.enabled) return;
+  const deadline = Date.now() + 120000;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await gistSync();
+      break;
+    } catch (err) {
+      gist.lastError = err.message;
+      console.error(`[KAYIT] Bulut kaydına ulaşılamadı (deneme ${attempt}):`, err.message);
+      // Yalnızca geçici hatalarda (ağ kopması, GitHub 5xx/429) 2 dakikaya kadar yeniden dene.
+      // Anahtar hatası gibi kalıcı hatalarda (401/403/404) beklemek çözmez; site kayıtsız açılır.
+      const transient = !err.status || err.status >= 500 || err.status === 429;
+      if (!transient || Date.now() > deadline) break;
+      await sleep(Math.min(3000 * attempt, 10000));
+    }
+  }
+  storageReady = true;
+  if (!gist.ready) {
+    console.error('[UYARI] Kalıcı kayıt şu an çalışmıyor; kayıtlar yalnızca bu oturumda tutuluyor.');
+    scheduleGistRetry();
+  }
+}
+
+/** Yoğun kullanımda GitHub sınırlarına takılmamak için yazma aralığını ayarlar. */
+function nextSaveDelay() {
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  gist.writeTimes = gist.writeTimes.filter((t) => t > cutoff);
+  return gist.writeTimes.length >= 40 ? 30000 : 2000;
+}
+
+function scheduleRemoteSave(delayMs) {
+  if (!gist.enabled) return;
+  gist.dirty = true;
+  if (!gist.ready || gist.saving || gist.timer || shuttingDown) return;
+  gist.timer = setTimeout(runRemoteSave, typeof delayMs === 'number' ? delayMs : nextSaveDelay());
+}
+
+async function runRemoteSave() {
+  if (gist.timer) {
+    clearTimeout(gist.timer);
+    gist.timer = null;
+  }
+  if (gist.saving || !gist.dirty || !gist.ready) return;
+  gist.saving = true;
+  gist.dirty = false;
+  try {
+    const content = sealData(state);
+    if (gist.id) {
+      await gistRequest('PATCH', '/gists/' + encodeURIComponent(gist.id), {
+        files: { [GIST_FILE]: { content } }
+      });
+    } else {
+      const created = await gistRequest('POST', '/gists', {
+        description: GIST_DESCRIPTION,
+        public: false,
+        files: { [GIST_FILE]: { content } }
+      });
+      if (!created || !created.id) {
+        throw new Error('Gist oluşturuldu ama kimliği alınamadı');
+      }
+      gist.id = String(created.id);
+      console.log(`[KAYIT] Bulut kaydı oluşturuldu (gist ${gist.id}).`);
+    }
+    gist.writeTimes.push(Date.now());
+    gist.lastSavedAt = new Date().toISOString();
+    gist.lastError = null;
+    gist.failCount = 0;
+  } catch (err) {
+    gist.dirty = true;
+    gist.failCount++;
+    gist.lastError = err.message;
+    if (err.status === 404 && gist.id && !GIST_ID_ENV) {
+      gist.id = null; // Gist silinmiş: sonraki denemede yeniden oluştur
+    }
+    console.error('[KAYIT] Buluta yazılamadı:', err.message);
+  } finally {
+    gist.saving = false;
+    if (gist.dirty && !shuttingDown) {
+      const delay = gist.failCount
+        ? Math.min(60000, 3000 * 2 ** Math.min(gist.failCount - 1, 5))
+        : nextSaveDelay();
+      gist.timer = setTimeout(runRemoteSave, delay);
+    }
+  }
+}
 
 /**
  * Sabit zamanlı (constant-time) yönetici anahtarı doğrulaması.
@@ -226,9 +576,31 @@ function extractPlayerToken(req, body) {
 }
 
 /**
+ * İstekten tarayıcı kimliğini çıkarır. Tarayıcı bu rastgele kimliği kendisi üretir ve her
+ * istekte yollar. Katılım yanıtı yolda kaybolursa (anahtar tarayıcıya ulaşmazsa) sunucu
+ * oyuncuyu bu kimlikten tanıyıp anahtarını yeniden verir; isim sahipsiz kilitli kalmaz.
+ */
+function extractClientId(req, body) {
+  const fromHeader = req.headers['x-client-id'];
+  const fromBody = body && typeof body.clientId === 'string' ? body.clientId : '';
+  const value = (typeof fromHeader === 'string' && fromHeader.trim()) || fromBody.trim();
+  return /^[A-Za-z0-9_-]{16,80}$/.test(value) ? value : null;
+}
+
+/**
  * İstekten yönetici anahtarını çıkarır.
  */
 function extractAdminKey(req, body) {
+  // Tarayıcılar başlıkta ş, ğ, ı gibi harfleri gönderemez; istemci anahtarı URL-kodlu yollar.
+  const encodedKey = req.headers['x-admin-key-enc'];
+  if (typeof encodedKey === 'string' && encodedKey.trim()) {
+    try {
+      const decoded = decodeURIComponent(encodedKey.trim()).trim();
+      if (decoded) return decoded;
+    } catch (_e) {
+      // bozuk kodlama: diğer kaynaklara bak
+    }
+  }
   const headerKey = req.headers['x-admin-key'];
   if (typeof headerKey === 'string' && headerKey.trim()) {
     return headerKey.trim();
@@ -257,12 +629,35 @@ function findPlayerByToken(token) {
 }
 
 /**
+ * Tarayıcı kimliği ile oyuncuyu bulur (yalnızca isim alınmışsa).
+ */
+function findPlayerByClientId(clientId) {
+  if (!clientId) return null;
+  for (const groupKey of ['5star', '4.5star']) {
+    const group = state.groups[groupKey];
+    for (let i = 0; i < group.players.length; i++) {
+      const p = group.players[i];
+      if (p.token && p.clientId && p.clientId === clientId) {
+        return { groupKey, group, player: p, index: i, requiredPicks: i + 1 };
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * İstemciye gönderilecek güvenli durum nesnesini üretir.
  * - Başka hiçbir oyuncunun tercihi (picks) veya anahtarı (token) asla gönderilmez.
  * - Açıklama (reveal) öncesinde results alanı hiç dönmez.
  */
-function buildClientState(playerToken, adminKey) {
-  const meInfo = findPlayerByToken(playerToken);
+function buildClientState(playerToken, adminKey, clientId) {
+  let meInfo = findPlayerByToken(playerToken);
+  // Anahtar tanınmıyor ama tarayıcı kimliği eşleşiyorsa oyuncu tanınır ve anahtarı yeniden verilir.
+  let recoveredToken = null;
+  if (!meInfo && clientId) {
+    meInfo = findPlayerByClientId(clientId);
+    if (meInfo) recoveredToken = meInfo.player.token;
+  }
   const isAdmin = adminKey ? verifyAdminKey(adminKey) : false;
 
   const groupsOut = {};
@@ -300,6 +695,7 @@ function buildClientState(playerToken, adminKey) {
   const response = {
     phase: state.phase,
     updatedAt: state.updatedAt,
+    bootId: BOOT_ID,
     summary: {
       totalPlayers,
       claimedCount,
@@ -325,6 +721,15 @@ function buildClientState(playerToken, adminKey) {
   // Gizlilik kuralı: Açıklama öncesinde sonuç alanı hiç dönmez.
   if (state.phase === 'reveal' && state.results) {
     response.results = state.results;
+  }
+
+  // Kayıtların kalıcı olup olmadığını yalnızca organizatör görür.
+  if (isAdmin) {
+    response.storage = storageInfo();
+  }
+
+  if (recoveredToken) {
+    response.recoveredToken = recoveredToken;
   }
 
   return response;
@@ -465,7 +870,8 @@ function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store, no-cache, must-revalidate',
-    'X-Content-Type-Options': 'nosniff'
+    'X-Content-Type-Options': 'nosniff',
+    'X-FC27-Server': '1'
   });
   res.end(body);
 }
@@ -516,6 +922,15 @@ function validatePoolList(rawPool, minRequired, groupLabel) {
 }
 
 /**
+ * İki havuzda da bulunan ilk takımı döndürür (yoksa null).
+ * Aynı takım iki havuzda olursa iki farklı oyuncuya düşebilir.
+ */
+function findSharedTeam(poolA, poolB) {
+  const seen = new Set(poolA.map((t) => t.toLocaleLowerCase('tr-TR')));
+  return poolB.find((t) => seen.has(t.toLocaleLowerCase('tr-TR'))) || null;
+}
+
+/**
  * Oyuncu listesini doğrular.
  */
 function validatePlayersList(rawPlayers, groupLabel, globalSeen) {
@@ -559,26 +974,63 @@ function validatePlayersList(rawPlayers, groupLabel, globalSeen) {
   return { ok: true, players: cleaned };
 }
 
+const LIVE_MARKER = '<script>window.__FC27_LIVE__=true;</script>';
+
 const server = http.createServer(async (req, res) => {
   try {
     const parsedUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     const pathname = parsedUrl.pathname;
     const method = req.method || 'GET';
+    const isRead = method === 'GET' || method === 'HEAD';
+
+    // Sağlık kontrolü (izleme servisleri için; HEAD de kabul edilir)
+    if (isRead && pathname === '/healthz') {
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (isRead && pathname === '/robots.txt') {
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('User-agent: *\nDisallow: /\n');
+      return;
+    }
+
+    if (isRead && pathname === '/favicon.ico') {
+      res.writeHead(204, { 'Cache-Control': 'public, max-age=86400' });
+      res.end();
+      return;
+    }
 
     // Ana sayfa (index.html)
-    if (method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
+    if (isRead && (pathname === '/' || pathname === '/index.html')) {
       if (!fs.existsSync(INDEX_FILE)) {
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
         res.end('index.html dosyası bulunamadı.');
         return;
       }
-      const html = fs.readFileSync(INDEX_FILE, 'utf8');
+      // İşaret, sayfanın gerçek sunucudan geldiğini bildirir; sayfa bu durumda
+      // bağlantı koptuğunda "önizleme simülasyonuna" asla geçmez.
+      const html = fs
+        .readFileSync(INDEX_FILE, 'utf8')
+        .replace(/<head>/i, '<head>\n  ' + LIVE_MARKER);
       res.writeHead(200, {
         'Content-Type': 'text/html; charset=utf-8',
         'Cache-Control': 'no-cache',
-        'X-Content-Type-Options': 'nosniff'
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Referrer-Policy': 'no-referrer'
       });
       res.end(html);
+      return;
+    }
+
+    // Bulut kaydı yüklenene kadar (açılıştan sonraki ilk saniyeler) işlem kabul edilmez.
+    if (pathname.startsWith('/api/') && !storageReady) {
+      res.setHeader('Retry-After', '3');
+      sendJson(res, 503, {
+        error: 'Sunucu açılıyor, kayıtlar yükleniyor. Birkaç saniye içinde hazır olacak.',
+        starting: true
+      });
       return;
     }
 
@@ -589,7 +1041,7 @@ const server = http.createServer(async (req, res) => {
         (parsedUrl.searchParams.get('token') || '').trim() ||
         null;
       const adminKey = extractAdminKey(req, null);
-      const clientState = buildClientState(token, adminKey);
+      const clientState = buildClientState(token, adminKey, extractClientId(req, null));
       sendJson(res, 200, clientState);
       return;
     }
@@ -618,6 +1070,7 @@ const server = http.createServer(async (req, res) => {
         const groupKey = typeof body.group === 'string' ? body.group.trim() : '';
         const name = typeof body.name === 'string' ? body.name.trim() : '';
         const currentToken = extractPlayerToken(req, body);
+        const clientId = extractClientId(req, body);
 
         if (!['5star', '4.5star'].includes(groupKey)) {
           sendJson(res, 400, { error: 'Geçersiz grup seçimi. 5★ veya 4.5★ seçmelisin.' });
@@ -639,7 +1092,10 @@ const server = http.createServer(async (req, res) => {
 
         // Zaten alınmış mı kontrol et
         if (targetPlayer.token) {
-          if (currentToken && targetPlayer.token === currentToken) {
+          // Aynı tarayıcı isteği yineliyorsa (ör. ilk yanıt yolda kaybolduysa) mevcut anahtarı geri ver.
+          const sameToken = currentToken && targetPlayer.token === currentToken;
+          const sameClient = clientId && targetPlayer.clientId === clientId;
+          if (sameToken || sameClient) {
             sendJson(res, 200, {
               ok: true,
               token: targetPlayer.token,
@@ -647,7 +1103,7 @@ const server = http.createServer(async (req, res) => {
               name: targetPlayer.name,
               order: playerIndex + 1,
               requiredPicks: playerIndex + 1,
-              state: buildClientState(targetPlayer.token, null)
+              state: buildClientState(targetPlayer.token, extractAdminKey(req, body))
             });
             return;
           }
@@ -669,6 +1125,7 @@ const server = http.createServer(async (req, res) => {
               return;
             }
             existing.player.token = null;
+            existing.player.clientId = null;
             existing.player.claimedAt = null;
             existing.player.picks = [];
             existing.player.pickedAt = null;
@@ -677,8 +1134,9 @@ const server = http.createServer(async (req, res) => {
 
         const newToken = crypto.randomBytes(24).toString('hex');
         targetPlayer.token = newToken;
+        targetPlayer.clientId = clientId;
         targetPlayer.claimedAt = new Date().toISOString();
-        saveDataAtomic(state);
+        persistState();
 
         sendJson(res, 200, {
           ok: true,
@@ -687,7 +1145,7 @@ const server = http.createServer(async (req, res) => {
           name: targetPlayer.name,
           order: playerIndex + 1,
           requiredPicks: playerIndex + 1,
-          state: buildClientState(newToken, null)
+          state: buildClientState(newToken, extractAdminKey(req, body))
         });
         return;
       }
@@ -715,14 +1173,15 @@ const server = http.createServer(async (req, res) => {
         }
 
         found.player.token = null;
+        found.player.clientId = null;
         found.player.claimedAt = null;
         found.player.picks = [];
         found.player.pickedAt = null;
-        saveDataAtomic(state);
+        persistState();
 
         sendJson(res, 200, {
           ok: true,
-          state: buildClientState(null, null)
+          state: buildClientState(null, extractAdminKey(req, body))
         });
         return;
       }
@@ -789,12 +1248,12 @@ const server = http.createServer(async (req, res) => {
 
         found.player.picks = cleanedPicks;
         found.player.pickedAt = new Date().toISOString();
-        saveDataAtomic(state);
+        persistState();
 
         sendJson(res, 200, {
           ok: true,
           picks: cleanedPicks,
-          state: buildClientState(token, null)
+          state: buildClientState(token, extractAdminKey(req, body))
         });
         return;
       }
@@ -866,6 +1325,14 @@ const server = http.createServer(async (req, res) => {
             nextPoolsMap[gKey] = poolVal.pool;
           }
 
+          const sharedTeam = findSharedTeam(nextPoolsMap['5star'], nextPoolsMap['4.5star']);
+          if (sharedTeam) {
+            sendJson(res, 400, {
+              error: `"${sharedTeam}" iki havuzda da var. Bir takım yalnızca bir havuzda bulunabilir.`
+            });
+            return;
+          }
+
           // Mevcut katılan oyuncuların tokenlarını koruyarak oyuncu listesini ve havuzları kaydet
           for (const gKey of ['5star', '4.5star']) {
             const gObj = state.groups[gKey];
@@ -875,6 +1342,7 @@ const server = http.createServer(async (req, res) => {
               return {
                 name,
                 token: prev ? prev.token : null,
+                clientId: prev ? prev.clientId || null : null,
                 claimedAt: prev ? prev.claimedAt : null,
                 picks: [],
                 pickedAt: null
@@ -883,7 +1351,7 @@ const server = http.createServer(async (req, res) => {
             gObj.pool = nextPoolsMap[gKey];
           }
 
-          saveDataAtomic(state);
+          persistState();
           sendJson(res, 200, {
             ok: true,
             state: buildClientState(playerToken, adminKey)
@@ -916,10 +1384,11 @@ const server = http.createServer(async (req, res) => {
           }
 
           target.token = null;
+          target.clientId = null;
           target.claimedAt = null;
           target.picks = [];
           target.pickedAt = null;
-          saveDataAtomic(state);
+          persistState();
 
           sendJson(res, 200, {
             ok: true,
@@ -952,9 +1421,20 @@ const server = http.createServer(async (req, res) => {
             }
           }
 
+          const sharedAtStart = findSharedTeam(
+            state.groups['5star'].pool,
+            state.groups['4.5star'].pool
+          );
+          if (sharedAtStart) {
+            sendJson(res, 400, {
+              error: `"${sharedAtStart}" iki havuzda da var. Bir takım yalnızca bir havuzda bulunabilir.`
+            });
+            return;
+          }
+
           state.phase = 'pick';
           state.results = null;
-          saveDataAtomic(state);
+          persistState();
 
           sendJson(res, 200, {
             ok: true,
@@ -994,7 +1474,7 @@ const server = http.createServer(async (req, res) => {
 
           state.results = computeRevealResults();
           state.phase = 'reveal';
-          saveDataAtomic(state);
+          persistState();
 
           sendJson(res, 200, {
             ok: true,
@@ -1014,7 +1494,7 @@ const server = http.createServer(async (req, res) => {
           }
           state.phase = 'prep';
           state.results = null;
-          saveDataAtomic(state);
+          persistState();
 
           sendJson(res, 200, {
             ok: true,
@@ -1040,14 +1520,68 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[KAPANIŞ] ${signal} alındı, bekleyen kayıtlar yazılıyor.`);
+  setTimeout(() => process.exit(0), 12000).unref();
+  try {
+    server.close();
+    if (gist.enabled && gist.ready) {
+      const waitUntil = Date.now() + 10000;
+      while (gist.saving && Date.now() < waitUntil) {
+        await sleep(100);
+      }
+      if (gist.dirty) await runRemoteSave();
+    }
+  } catch (err) {
+    console.error('[KAPANIŞ] Son kayıt yazılamadı:', err.message);
+  }
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Beklenmeyen bir hata sunucuyu düşürmesin: düşerse bellekteki kayıtlar kaybolur.
+process.on('unhandledRejection', (reason) => {
+  console.error('[HATA] Yakalanmamış söz reddi:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[HATA] Yakalanmamış hata:', err);
+});
+
+server.on('error', (err) => {
+  console.error('[SUNUCU] Başlatılamadı:', err.message);
+  process.exit(1);
+});
+
 server.listen(PORT, HOST, () => {
   console.log('============================================================');
   console.log(`EA Sports FC 27 Turnuva Sunucusu çalışıyor: http://localhost:${PORT}`);
   if (!ENV_ADMIN_KEY) {
     console.log(`Rastgele üretilen ADMIN_KEY: ${ADMIN_KEY}`);
+    console.log('[UYARI] ADMIN_KEY ortam değişkeni tanımlı değil; anahtar her yeniden başlatmada değişir.');
   } else {
     console.log('ADMIN_KEY ortam değişkeninden yüklendi.');
   }
-  console.log(`Organizatör Giriş Adresi: http://localhost:${PORT}/?admin=${ADMIN_KEY}`);
+  console.log(`Organizatör Giriş Adresi: http://localhost:${PORT}/?admin=${encodeURIComponent(ADMIN_KEY)}`);
+  const info = storageInfo();
+  if (info.mode === 'gist') {
+    console.log('[KAYIT] Kalıcı kayıt açık: durum şifreli olarak GitHub Gist\'e yazılıyor.');
+  } else if (info.mode === 'ephemeral') {
+    console.log('[UYARI] Kalıcı kayıt KAPALI: sunucu yeniden başladığında tüm isimler, tercihler ve sonuçlar silinir.');
+    console.log('        Render ücretsiz planında bu, 15 dakika kimse girmediğinde olur. Çözüm: GIST_TOKEN ortam değişkeni.');
+  } else {
+    console.log(`[KAYIT] Kayıt dosyası: ${DATA_FILE}`);
+  }
+  if (info.error && info.mode !== 'gist') {
+    console.log('[UYARI] ' + info.error);
+  }
   console.log('============================================================');
+});
+
+initStorage().catch((err) => {
+  console.error('[KAYIT] Açılış eşitlemesi başarısız:', err);
+  storageReady = true;
 });
