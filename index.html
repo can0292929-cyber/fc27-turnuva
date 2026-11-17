@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
   <title>EA Sports FC 27 — Gizli Takım Seçim ve Turnuva Dağıtım Sistemi</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E" />
   <style>
     :root,
     [data-theme="dark"] {
@@ -414,6 +415,7 @@
       text-align: left;
       color: var(--text-primary);
       transition: all 0.15s ease;
+      min-width: 0;
     }
 
     .category-card:hover {
@@ -432,11 +434,19 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 4px 8px;
     }
 
     .category-card .cat-desc {
       font-size: 0.8rem;
       color: var(--text-secondary);
+    }
+
+    @media (max-width: 340px) {
+      .category-selector {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* İsim Seçim Listesi */
@@ -969,6 +979,28 @@
       font-size: 0.78rem;
     }
 
+    /* Bağlantı ve kayıt uyarı bantları */
+    .notice-banner {
+      border-radius: 12px;
+      padding: 11px 14px;
+      margin-bottom: 16px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      border: 1px solid var(--accent-gold);
+      background: var(--accent-gold-soft);
+      color: var(--text-primary);
+    }
+
+    .notice-banner.ok {
+      border-color: var(--accent-green);
+      background: var(--accent-green-soft);
+    }
+
+    .notice-banner.danger {
+      border-color: var(--accent-red);
+      background: var(--accent-red-soft);
+    }
+
     .hidden {
       display: none !important;
     }
@@ -1026,6 +1058,9 @@
         </button>
       </div>
     </header>
+
+    <!-- Bağlantı durumu (sunucuya ulaşılamadığında görünür) -->
+    <div id="connBanner" class="notice-banner danger hidden" role="status"></div>
 
     <!-- Oyuncu Kimlik Kartı (İsim seçildikten sonra görünür) -->
     <section id="identityBanner" class="identity-banner hidden">
@@ -1091,7 +1126,7 @@
         <div>
           <h3 class="form-label" id="joinGroupTitle">5★ Grubu Oyuncuları (Sırayla)</h3>
           <p class="form-hint">Sıradaki k. kişi tam olarak k takım tercih eder. Seçilmiş isimler devre dışıdır.</p>
-          <div id="joinPlayerGrid" class="player-select-grid"></div>
+          <div id="joinPlayerGrid" class="player-select-grid"><span class="form-hint">Oyuncu listesi yükleniyor…</span></div>
         </div>
       </section>
 
@@ -1252,6 +1287,9 @@
           </div>
         </div>
 
+        <!-- Kayıtların kalıcı olup olmadığı (yalnızca organizatör görür) -->
+        <div id="adminStorageNotice" class="notice-banner hidden" style="margin-top: 14px; margin-bottom: 0;"></div>
+
         <!-- Katılımcı Yönetimi ve İsim Serbest Bırakma -->
         <div class="grid-2" style="margin-top: 16px;">
           <div>
@@ -1336,7 +1374,10 @@
         PLAYER_TOKEN: 'fc27_player_token',
         ADMIN_KEY: 'fc27_admin_key',
         THEME: 'fc27_theme',
-        DEMO_STATE: 'fc27_canvas_demo_state'
+        DEMO_STATE: 'fc27_canvas_demo_state',
+        LIVE: 'fc27_live_server',
+        BOOT_ID: 'fc27_boot_id',
+        CLIENT_ID: 'fc27_client_id'
       };
 
       function safeGetStorage(key) {
@@ -1361,7 +1402,7 @@
 
       // --- Bildirim (Toast) Sistemi ---
       const toastContainer = document.getElementById('toastContainer');
-      function showToast(message, type) {
+      function showToast(message, type, durationMs) {
         const el = document.createElement('div');
         el.className = 'toast ' + (type || 'info');
         const span = document.createElement('span');
@@ -1379,7 +1420,7 @@
         toastContainer.appendChild(el);
         setTimeout(function () {
           if (el.parentNode) el.remove();
-        }, 4200);
+        }, durationMs || 4200);
       }
 
       // --- Özel Onay Modalı (window.confirm yerine) ---
@@ -1442,6 +1483,30 @@
       // --- URL'den ?admin=ANAHTAR Okuma ve Temizleme ---
       let playerToken = safeGetStorage(STORAGE_KEYS.PLAYER_TOKEN) || '';
       let adminKey = safeGetStorage(STORAGE_KEYS.ADMIN_KEY) || '';
+      // Bozuk bir kayıt istek başlığında gönderilemez ve tüm istekleri düşürür; geçersizse yok say.
+      if (!/^[A-Za-z0-9_-]{6,200}$/.test(playerToken)) {
+        playerToken = '';
+      }
+
+      // Bu tarayıcıya özgü rastgele kimlik. Katılım yanıtı yolda kaybolursa (anahtar bu tarayıcıya
+      // ulaşmazsa) sunucu oyuncuyu bu kimlikten tanır ve anahtarını yeniden verir.
+      function makeClientId() {
+        try {
+          const bytes = new Uint8Array(16);
+          window.crypto.getRandomValues(bytes);
+          return Array.prototype.map
+            .call(bytes, function (b) { return ('0' + b.toString(16)).slice(-2); })
+            .join('');
+        } catch (_e) {
+          return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+        }
+      }
+
+      let clientId = safeGetStorage(STORAGE_KEYS.CLIENT_ID) || '';
+      if (!/^[A-Za-z0-9_-]{16,80}$/.test(clientId)) {
+        clientId = makeClientId();
+        safeSetStorage(STORAGE_KEYS.CLIENT_ID, clientId);
+      }
 
       (function checkUrlAdminParam() {
         try {
@@ -1748,28 +1813,73 @@
         return { ok: false, status: 404, data: { error: 'Bulunamadı' } };
       }
 
+      // Sayfa gerçek sunucudan mı geliyor? Sunucu sayfaya bir işaret ekler; ayrıca gerçek sunucudan
+      // bir kez yanıt alındıysa bu tarayıcı bunu hatırlar. Gerçek sunucuda bağlantı koparsa yerel
+      // simülasyona ASLA geçilmez: aksi halde oyuncu, gönderilmemiş tercihini gönderildi sanar ve
+      // tek bir kopmada anahtarını kaybeder.
+      let liveServer = window.__FC27_LIVE__ === true || safeGetStorage(STORAGE_KEYS.LIVE) === '1';
+
+      function markLiveServer() {
+        if (!liveServer) {
+          liveServer = true;
+          safeSetStorage(STORAGE_KEYS.LIVE, '1');
+        }
+      }
+
+      function isPlainAscii(text) {
+        return /^[\x20-\x7E]*$/.test(text);
+      }
+
       async function apiRequest(path, method, bodyObj) {
+        const verb = method || 'GET';
         const headers = { 'Accept': 'application/json' };
         if (playerToken) headers['X-Player-Token'] = playerToken;
-        if (adminKey) headers['X-Admin-Key'] = adminKey;
+        if (/^[A-Za-z0-9_-]{16,80}$/.test(clientId)) headers['X-Client-Id'] = clientId;
+        if (adminKey) {
+          // İstek başlıkları ş, ğ, ı gibi harfleri taşıyamaz; anahtar URL-kodlu gönderilir.
+          headers['X-Admin-Key-Enc'] = encodeURIComponent(adminKey);
+          if (isPlainAscii(adminKey)) headers['X-Admin-Key'] = adminKey;
+        }
         if (bodyObj) headers['Content-Type'] = 'application/json';
+
+        const controller = typeof AbortController === 'function' ? new AbortController() : null;
+        const timeoutId = controller
+          ? setTimeout(function () { controller.abort(); }, verb === 'GET' ? 20000 : 45000)
+          : null;
 
         try {
           const response = await fetch(path, {
-            method: method || 'GET',
+            method: verb,
             headers: headers,
             body: bodyObj ? JSON.stringify(bodyObj) : undefined,
-            cache: 'no-store'
+            cache: 'no-store',
+            signal: controller ? controller.signal : undefined
           });
           const contentType = response.headers.get('content-type') || '';
           if (contentType.indexOf('application/json') === -1) {
             throw new Error('JSON olmayan yanıt');
           }
           const data = await response.json();
-          return { ok: response.ok, status: response.status, data: data };
+          if (!data || typeof data !== 'object') {
+            throw new Error('Geçersiz yanıt');
+          }
+          markLiveServer();
+          return { ok: response.ok, status: response.status, data: data, real: true };
         } catch (_networkErr) {
-          // Yalnızca sunucu bağlantısı olmayan statik önizleme ortamında yerel simülasyonu kullan
-          return handleFallbackRequest(path, method || 'GET', bodyObj || {});
+          if (liveServer) {
+            return {
+              ok: false,
+              status: 0,
+              network: true,
+              data: {
+                error: 'Sunucuya ulaşılamadı. İnternet bağlantını kontrol et; sayfa kendiliğinden tekrar deneyecek.'
+              }
+            };
+          }
+          // Yalnızca sunucusuz statik önizlemede (ör. Canvas) yerel simülasyon kullanılır
+          return handleFallbackRequest(path, verb, bodyObj || {});
+        } finally {
+          if (timeoutId) clearTimeout(timeoutId);
         }
       }
 
@@ -1783,8 +1893,27 @@
       let resetArmedUntil = 0;
       let resetArmTimer = null;
       let adminPoolsDirty = false;
+      let actionBusy = false; // aynı anda tek işlem (çift dokunuş koruması)
+      let pollInFlight = false;
+      let stateEpoch = 0; // her uygulanan durumda artar
+      let lastStateSig = '';
+      let adminRejectNotified = false;
+      const sectionSigs = {};
+
+      // Aynı anda yalnızca bir işlem çalışır; ikinci dokunuş yok sayılır.
+      async function runExclusive(fn) {
+        if (actionBusy) return;
+        actionBusy = true;
+        try {
+          await fn();
+        } finally {
+          actionBusy = false;
+        }
+      }
 
       // --- DOM Referansları ---
+      const connBanner = document.getElementById('connBanner');
+      const adminStorageNotice = document.getElementById('adminStorageNotice');
       const phaseBadge = document.getElementById('phaseBadge');
       const phaseText = document.getElementById('phaseText');
       const identityBanner = document.getElementById('identityBanner');
@@ -1903,49 +2032,65 @@
         renderJoinSection();
       });
 
+      // Oyuncu işlemlerinin yanıtında yöneticiye özel alanlar bulunmayabilir; mevcut değerleri koru.
+      function withAdminFields(nextState) {
+        if (serverState && serverState.isAdmin && nextState && !nextState.isAdmin) {
+          nextState.isAdmin = true;
+          if (serverState.storage && !nextState.storage) nextState.storage = serverState.storage;
+        }
+        return nextState;
+      }
+
       // --- Oyuncu İsim Seçme (Katılım) ---
-      async function claimPlayerName(groupKey, name) {
-        const res = await apiRequest('/api/claim', 'POST', {
-          group: groupKey,
-          name: name,
-          token: playerToken
+      function claimPlayerName(groupKey, name) {
+        return runExclusive(async function () {
+          const res = await apiRequest('/api/claim', 'POST', {
+            group: groupKey,
+            name: name,
+            token: playerToken,
+            clientId: clientId
+          });
+          if (!res.ok) {
+            showToast(res.data.error || 'İsim seçilemedi.', 'error');
+            await fetchState();
+            return;
+          }
+          playerToken = res.data.token;
+          safeSetStorage(STORAGE_KEYS.PLAYER_TOKEN, playerToken);
+          draftPicks = [];
+          isEditingSubmittedPicks = false;
+          showSealedPicks = false;
+          showToast(name + ' olarak turnuvaya katıldın!', 'success');
+          if (res.data.state) {
+            applyServerState(withAdminFields(res.data.state), { real: res.real === true });
+          } else {
+            await fetchState();
+          }
         });
-        if (!res.ok) {
-          showToast(res.data.error || 'İsim seçilemedi.', 'error');
-          await fetchState();
-          return;
-        }
-        playerToken = res.data.token;
-        safeSetStorage(STORAGE_KEYS.PLAYER_TOKEN, playerToken);
-        draftPicks = [];
-        isEditingSubmittedPicks = false;
-        showSealedPicks = false;
-        showToast(name + ' olarak turnuvaya katıldın!', 'success');
-        if (res.data.state) {
-          applyServerState(res.data.state);
-        } else {
-          await fetchState();
-        }
       }
 
       // --- "Ben değilim" (İsmi Bırakma) ---
-      leaveNameBtn.addEventListener('click', async function () {
-        const res = await apiRequest('/api/leave', 'POST', { token: playerToken });
-        if (!res.ok) {
-          showToast(res.data.error || 'İsim bırakılamadı.', 'error');
-          return;
-        }
-        playerToken = '';
-        safeSetStorage(STORAGE_KEYS.PLAYER_TOKEN, null);
-        draftPicks = [];
-        isEditingSubmittedPicks = false;
-        showSealedPicks = false;
-        showToast('İsim seçimin kaldırıldı.', 'info');
-        if (res.data.state) {
-          applyServerState(res.data.state);
-        } else {
-          await fetchState();
-        }
+      leaveNameBtn.addEventListener('click', function () {
+        runExclusive(async function () {
+          const res = await apiRequest('/api/leave', 'POST', { token: playerToken });
+          if (!res.ok) {
+            showToast(res.data.error || 'İsim bırakılamadı.', 'error');
+            if (res.status === 401) await fetchState();
+            return;
+          }
+          playerToken = '';
+          safeSetStorage(STORAGE_KEYS.PLAYER_TOKEN, null);
+          safeSetStorage(STORAGE_KEYS.BOOT_ID, null);
+          draftPicks = [];
+          isEditingSubmittedPicks = false;
+          showSealedPicks = false;
+          showToast('İsim seçimin kaldırıldı.', 'info');
+          if (res.data.state) {
+            applyServerState(withAdminFields(res.data.state), { real: res.real === true });
+          } else {
+            await fetchState();
+          }
+        });
       });
 
       // --- Takım Seçim Etkileşimi ---
@@ -1991,47 +2136,57 @@
       });
 
       // --- Tercihleri Gönderme ---
-      submitPicksBtn.addEventListener('click', async function () {
-        if (!serverState || !serverState.me) return;
-        const k = serverState.me.requiredPicks;
-        if (draftPicks.length !== k) {
-          showToast('Tam olarak ' + k + ' takım seçmelisin.', 'error');
-          return;
-        }
-        submitPicksBtn.disabled = true;
-        const res = await apiRequest('/api/pick', 'POST', {
-          token: playerToken,
-          picks: draftPicks
+      submitPicksBtn.addEventListener('click', function () {
+        runExclusive(async function () {
+          if (!serverState || !serverState.me) return;
+          const k = serverState.me.requiredPicks;
+          if (draftPicks.length !== k) {
+            showToast('Tam olarak ' + k + ' takım seçmelisin.', 'error');
+            return;
+          }
+          submitPicksBtn.disabled = true;
+          const res = await apiRequest('/api/pick', 'POST', {
+            token: playerToken,
+            picks: draftPicks
+          });
+          if (!res.ok) {
+            showToast(
+              (res.data.error || 'Tercihler gönderilemedi.') +
+                (res.network ? ' Tercihlerin gönderilememiş olabilir: bağlantı gelince bu ekranda “mühürlendi” yazmıyorsa tekrar gönder.' : ''),
+              'error',
+              res.network ? 9000 : undefined
+            );
+            submitPicksBtn.disabled = false;
+            if (res.status === 401) await fetchState();
+            return;
+          }
+          isEditingSubmittedPicks = false;
+          showSealedPicks = false;
+          showToast('Tercihlerin başarıyla mühürlendi ve gönderildi!', 'success');
+          if (res.data.state) {
+            applyServerState(withAdminFields(res.data.state), { real: res.real === true });
+          } else {
+            await fetchState();
+          }
         });
-        if (!res.ok) {
-          showToast(res.data.error || 'Tercihler gönderilemedi.', 'error');
-          submitPicksBtn.disabled = false;
-          return;
-        }
-        isEditingSubmittedPicks = false;
-        showSealedPicks = false;
-        showToast('Tercihlerin başarıyla mühürlendi ve gönderildi!', 'success');
-        if (res.data.state) {
-          applyServerState(res.data.state);
-        } else {
-          await fetchState();
-        }
       });
 
       // --- Yönetici İşlemleri ---
-      adminStartPickBtn.addEventListener('click', async function () {
-        // Eğer metin kutularında kaydedilmemiş değişiklik varsa önce kaydet
-        if (adminPoolsDirty && serverState && serverState.phase === 'prep') {
-          const saved = await saveAdminPoolsInternal(true);
-          if (!saved) return;
-        }
-        const res = await apiRequest('/api/admin/start', 'POST', { adminKey: adminKey });
-        if (!res.ok) {
-          showToast(res.data.error || 'Seçim başlatılamadı.', 'error');
-          return;
-        }
-        showToast('Seçim aşaması başlatıldı! Oyuncular tercihlerini girebilir.', 'success');
-        if (res.data.state) applyServerState(res.data.state);
+      adminStartPickBtn.addEventListener('click', function () {
+        runExclusive(async function () {
+          // Eğer metin kutularında kaydedilmemiş değişiklik varsa önce kaydet
+          if (adminPoolsDirty && serverState && serverState.phase === 'prep') {
+            const saved = await saveAdminPoolsInternal(true);
+            if (!saved) return;
+          }
+          const res = await apiRequest('/api/admin/start', 'POST', { adminKey: adminKey });
+          if (!res.ok) {
+            showToast(res.data.error || 'Seçim başlatılamadı.', 'error');
+            return;
+          }
+          showToast('Seçim aşaması başlatıldı! Oyuncular tercihlerini girebilir.', 'success');
+          if (res.data.state) applyServerState(res.data.state, { real: res.real === true });
+        });
       });
 
       async function executeReveal(requireAllPicked) {
@@ -2047,7 +2202,7 @@
             'Tercih Göndermeyen Oyuncular Var',
             'Henüz tercih göndermeyen oyuncular var: ' + missingNames + '. Tercih göndermeyen kişiler takım alamayacak. Yine de seçimleri açıklamak istiyor musunuz?',
             function () {
-              executeReveal(false);
+              runExclusive(function () { return executeReveal(false); });
             }
           );
           return;
@@ -2057,32 +2212,34 @@
           return;
         }
         showToast('Seçimler açıklandı ve takımlar dağıtıldı!', 'success');
-        if (res.data.state) applyServerState(res.data.state);
+        if (res.data.state) applyServerState(res.data.state, { real: res.real === true });
         switchTab('results');
       }
 
       adminRevealBtn.addEventListener('click', function () {
-        executeReveal(true);
+        runExclusive(function () { return executeReveal(true); });
       });
 
       // "Baştan başla" iki kez basılmalı
-      adminResetBtn.addEventListener('click', async function () {
+      adminResetBtn.addEventListener('click', function () {
         const now = Date.now();
         if (now < resetArmedUntil) {
           resetArmedUntil = 0;
           if (resetArmTimer) clearTimeout(resetArmTimer);
           adminResetBtn.textContent = '🔄 Baştan Başla';
-          const res = await apiRequest('/api/admin/reset', 'POST', { adminKey: adminKey });
-          if (!res.ok) {
-            showToast(res.data.error || 'Sıfırlama başarısız oldu.', 'error');
-            return;
-          }
-          draftPicks = [];
-          isEditingSubmittedPicks = false;
-          showSealedPicks = false;
-          adminPoolsDirty = false;
-          showToast('Turnuva sıfırlandı. Katılan isimler korundu, faz hazırlığa döndü.', 'success');
-          if (res.data.state) applyServerState(res.data.state);
+          runExclusive(async function () {
+            const res = await apiRequest('/api/admin/reset', 'POST', { adminKey: adminKey });
+            if (!res.ok) {
+              showToast(res.data.error || 'Sıfırlama başarısız oldu.', 'error');
+              return;
+            }
+            draftPicks = [];
+            isEditingSubmittedPicks = false;
+            showSealedPicks = false;
+            adminPoolsDirty = false;
+            showToast('Turnuva sıfırlandı. Katılan isimler korundu, faz hazırlığa döndü.', 'success');
+            if (res.data.state) applyServerState(res.data.state, { real: res.real === true });
+          });
         } else {
           resetArmedUntil = now + 4500;
           adminResetBtn.textContent = '⚠️ Onaylamak İçin Tekrar Bas';
@@ -2094,18 +2251,20 @@
         }
       });
 
-      async function releasePlayerByAdmin(groupKey, playerName) {
-        const res = await apiRequest('/api/admin/release', 'POST', {
-          adminKey: adminKey,
-          group: groupKey,
-          name: playerName
+      function releasePlayerByAdmin(groupKey, playerName) {
+        return runExclusive(async function () {
+          const res = await apiRequest('/api/admin/release', 'POST', {
+            adminKey: adminKey,
+            group: groupKey,
+            name: playerName
+          });
+          if (!res.ok) {
+            showToast(res.data.error || 'İsim serbest bırakılamadı.', 'error');
+            return;
+          }
+          showToast(playerName + ' ismi serbest bırakıldı.', 'info');
+          if (res.data.state) applyServerState(res.data.state, { real: res.real === true });
         });
-        if (!res.ok) {
-          showToast(res.data.error || 'İsim serbest bırakılamadı.', 'error');
-          return;
-        }
-        showToast(playerName + ' ismi serbest bırakıldı.', 'info');
-        if (res.data.state) applyServerState(res.data.state);
       }
 
       function parseLines(text) {
@@ -2153,12 +2312,12 @@
         if (!silentSuccess) {
           showToast('Takım havuzları ve oyuncu listeleri güncellendi.', 'success');
         }
-        if (res.data.state) applyServerState(res.data.state);
+        if (res.data.state) applyServerState(res.data.state, { real: res.real === true });
         return true;
       }
 
       adminSavePoolsBtn.addEventListener('click', function () {
-        saveAdminPoolsInternal(false);
+        runExclusive(function () { return saveAdminPoolsInternal(false); });
       });
 
       // --- Organizatör Anahtarı Modalı ---
@@ -2178,28 +2337,51 @@
         adminKeyModal.classList.remove('open');
       });
 
-      adminModalSaveBtn.addEventListener('click', async function () {
-        const candidate = adminKeyInput.value.trim();
-        if (!candidate) {
-          adminKey = '';
-          safeSetStorage(STORAGE_KEYS.ADMIN_KEY, null);
+      adminModalSaveBtn.addEventListener('click', function () {
+        runExclusive(async function () {
+          const candidate = adminKeyInput.value.trim();
+          if (!candidate) {
+            adminKey = '';
+            safeSetStorage(STORAGE_KEYS.ADMIN_KEY, null);
+            adminKeyModal.classList.remove('open');
+            lastStateSig = '';
+            await fetchState();
+            return;
+          }
+          const previousKey = adminKey;
+          adminKey = candidate;
+          const res = await apiRequest('/api/admin/verify', 'POST', { adminKey: candidate });
+          if (!res.ok) {
+            if (res.network) {
+              // Bağlantı sorunu: anahtarın doğru olup olmadığı bilinmiyor, eskisini silme.
+              adminKey = previousKey;
+              showToast(res.data.error, 'error');
+              return;
+            }
+            adminKey = '';
+            safeSetStorage(STORAGE_KEYS.ADMIN_KEY, null);
+            showToast(res.data.error || 'Geçersiz yönetici anahtarı.', 'error');
+            return;
+          }
+          safeSetStorage(STORAGE_KEYS.ADMIN_KEY, candidate);
           adminKeyModal.classList.remove('open');
-          await fetchState();
-          return;
+          showToast('Organizatör modu etkinleştirildi.', 'success');
+          if (res.data.state) applyServerState(res.data.state, { real: res.real === true });
+          switchTab('admin');
+        });
+      });
+
+      adminKeyInput.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          adminModalSaveBtn.click();
         }
-        adminKey = candidate;
-        const res = await apiRequest('/api/admin/verify', 'POST', { adminKey: candidate });
-        if (!res.ok) {
-          adminKey = '';
-          safeSetStorage(STORAGE_KEYS.ADMIN_KEY, null);
-          showToast(res.data.error || 'Geçersiz yönetici anahtarı.', 'error');
-          return;
-        }
-        safeSetStorage(STORAGE_KEYS.ADMIN_KEY, candidate);
+      });
+
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Escape') return;
+        if (confirmModal.classList.contains('open')) closeConfirmModal();
         adminKeyModal.classList.remove('open');
-        showToast('Organizatör modu etkinleştirildi.', 'success');
-        if (res.data.state) applyServerState(res.data.state);
-        switchTab('admin');
       });
 
       // --- Arayüz Render Fonksiyonları ---
@@ -2237,7 +2419,7 @@
         }
 
         // Yönetim sekmesi görünürlüğü
-        if (serverState.isAdmin || adminKey) {
+        if (serverState.isAdmin) {
           tabBtnAdmin.classList.remove('hidden');
         } else {
           tabBtnAdmin.classList.add('hidden');
@@ -2632,12 +2814,55 @@
         });
       }
 
+      // Organizatöre kayıtların kalıcı olup olmadığını gösterir.
+      function renderStorageNotice() {
+        const st = serverState ? serverState.storage : null;
+        if (!serverState || !serverState.isAdmin || !st || st.mode === 'file') {
+          adminStorageNotice.classList.add('hidden');
+          return;
+        }
+        let cls = 'notice-banner';
+        let text = '';
+        if (st.mode === 'ephemeral') {
+          cls += ' danger';
+          text =
+            '⚠️ Kalıcı kayıt KAPALI. Sunucu yeniden başladığında tüm isimler, tercihler ve sonuçlar silinir; ' +
+            'ücretsiz Render planında bu, siteye 15 dakika kimse girmediğinde olur. ' +
+            'Kalıcı olması için Render ayarlarına GIST_TOKEN ortam değişkenini ekle.' +
+            (st.error ? ' (' + st.error + ')' : '');
+        } else if (st.error) {
+          cls += ' danger';
+          text =
+            '⚠️ Kalıcı kayıt şu an çalışmıyor: ' + st.error +
+            (/\b401\b/.test(st.error) ? ' (GIST_TOKEN değeri hatalı ya da süresi dolmuş olabilir.)' : '') +
+            ' — Sunucu yeniden deniyor; bu sırada yapılan değişiklikler yeniden başlatmada kaybolabilir.';
+        } else if (!st.ready) {
+          text = '⏳ Kalıcı kayıt hazırlanıyor…';
+        } else {
+          cls += ' ok';
+          text = '✅ Kalıcı kayıt açık: isimler, tercihler ve sonuçlar sunucu yeniden başlasa da korunur.';
+          if (st.lastSavedAt) {
+            const when = new Date(st.lastSavedAt);
+            if (!isNaN(when.getTime())) {
+              text += ' Son kayıt: ' + when.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) + '.';
+            }
+          }
+          if (st.pending) text += ' Yeni değişiklik yazılıyor…';
+        }
+        adminStorageNotice.className = cls;
+        adminStorageNotice.style.marginTop = '14px';
+        adminStorageNotice.style.marginBottom = '0';
+        adminStorageNotice.textContent = text;
+      }
+
       function renderAdminTab() {
         if (!serverState) return;
         const sum = serverState.summary || { totalPlayers: 10, claimedCount: 0, pickedCount: 0 };
         adminSummaryText.textContent =
           'Durum: ' + sum.claimedCount + ' / ' + sum.totalPlayers + ' oyuncu ismini aldı • ' +
           sum.pickedCount + ' / ' + sum.totalPlayers + ' oyuncu tercihini gönderdi. (Tercihler gizlidir)';
+
+        renderStorageNotice();
 
         adminStartPickBtn.disabled = serverState.phase !== 'prep';
         adminRevealBtn.disabled = serverState.phase !== 'pick';
@@ -2697,7 +2922,15 @@
               relBtn.className = 'btn btn-outline btn-sm';
               relBtn.textContent = 'Serbest bırak';
               relBtn.addEventListener('click', function () {
-                releasePlayerByAdmin(item.key, p.name);
+                openConfirmModal(
+                  'İsim Serbest Bırakılsın mı?',
+                  p.name + ' isminin kaydı silinecek' +
+                    (p.hasPicked ? ' ve GÖNDERDİĞİ TERCİHLER DE SİLİNECEK' : '') +
+                    '. Bu kişinin adını yeniden seçmesi gerekecek. Devam edilsin mi?',
+                  function () {
+                    releasePlayerByAdmin(item.key, p.name);
+                  }
+                );
               });
               right.appendChild(relBtn);
             }
@@ -2709,16 +2942,89 @@
         });
       }
 
-      function applyServerState(nextState) {
+      function sectionChanged(name, value) {
+        const sig = JSON.stringify(value);
+        if (sectionSigs[name] === sig) return false;
+        sectionSigs[name] = sig;
+        return true;
+      }
+
+      function setConnectionNotice(message) {
+        if (message) {
+          connBanner.textContent = message;
+          connBanner.classList.remove('hidden');
+        } else {
+          connBanner.classList.add('hidden');
+        }
+      }
+
+      // meta.real: yanıt gerçek sunucudan geldi (simülasyon değil).
+      // meta.fromPoll: 4 saniyelik yoklamadan geldi; yalnızca değişen bölümler yeniden çizilir.
+      function applyServerState(nextState, meta) {
+        const info = meta || {};
+        const isReal = info.real === true;
         const previousPhase = serverState ? serverState.phase : null;
         serverState = nextState;
+        stateEpoch++;
+        lastStateSig = JSON.stringify(nextState);
+        if (isReal) setConnectionNotice('');
 
-        // Eğer sunucuda oyuncunun tokenı serbest bırakıldıysa yerel tokenı temizle
-        if (playerToken && !serverState.me) {
+        // Sunucu bu tarayıcıyı kimliğinden tanıyıp anahtarı yeniden verdiyse kaydet
+        // (katılım yanıtı yolda kaybolmuş ya da anahtar silinmiş olabilir).
+        if (isReal && serverState.me && typeof serverState.recoveredToken === 'string' &&
+            /^[A-Za-z0-9_-]{6,200}$/.test(serverState.recoveredToken)) {
+          playerToken = serverState.recoveredToken;
+          safeSetStorage(STORAGE_KEYS.PLAYER_TOKEN, playerToken);
+        }
+        delete serverState.recoveredToken;
+
+        // Sunucu bu tarayıcının anahtarını tanımıyorsa yerel anahtarı temizle.
+        // Simülasyon yanıtı gerçek bir oyuncu anahtarını ASLA silmez.
+        if (playerToken && !serverState.me && (isReal || playerToken.indexOf('tok_') === 0)) {
+          const knownBoot = safeGetStorage(STORAGE_KEYS.BOOT_ID);
+          const restarted =
+            isReal && knownBoot && serverState.bootId && knownBoot !== serverState.bootId;
           playerToken = '';
           safeSetStorage(STORAGE_KEYS.PLAYER_TOKEN, null);
+          safeSetStorage(STORAGE_KEYS.BOOT_ID, null);
           draftPicks = [];
           isEditingSubmittedPicks = false;
+          showSealedPicks = false;
+          if (isReal) {
+            showToast(
+              restarted
+                ? 'Sunucu yeniden başlamış ve adın kayıtlarda yok. Adını yeniden seç; tercihlerin de silinmiş olabilir, organizatöre haber ver.'
+                : 'Adın serbest bırakılmış. Listeden yeniden seçebilirsin.',
+              'error',
+              12000
+            );
+          }
+        }
+        // Anahtarımızın geçerli olduğu sunucu oturumunu hatırla (yeniden başlatmayı ayırt etmek için).
+        if (isReal && serverState.me && serverState.bootId &&
+            safeGetStorage(STORAGE_KEYS.BOOT_ID) !== serverState.bootId) {
+          safeSetStorage(STORAGE_KEYS.BOOT_ID, serverState.bootId);
+        }
+
+        // Kayıtlı organizatör anahtarı sunucuda geçerli değilse bir kez haber ver.
+        if (isReal && adminKey) {
+          if (serverState.isAdmin) {
+            adminRejectNotified = false;
+          } else if (!adminRejectNotified) {
+            adminRejectNotified = true;
+            showToast(
+              'Kayıtlı organizatör anahtarı bu sunucuda geçerli değil. Sayfanın altındaki “Organizatör Anahtarı Gir” ile yeniden girebilirsin.',
+              'error',
+              10000
+            );
+          }
+        }
+
+        // Faz değişince önceki turdan kalan taslak ve düzenleme durumu temizlenir.
+        if (previousPhase && previousPhase !== serverState.phase) {
+          draftPicks = [];
+          isEditingSubmittedPicks = false;
+          showSealedPicks = false;
         }
 
         // Faz 'reveal' olduğunda otomatik olarak Sonuçlar sekmesini göster
@@ -2726,24 +3032,71 @@
           activeTab = 'results';
         }
 
+        // Bir işlemin yanıtıysa her şeyi yeniden çiz; yoklamaysa yalnızca değişen bölümleri.
+        if (!info.fromPoll) {
+          Object.keys(sectionSigs).forEach(function (k) { delete sectionSigs[k]; });
+        }
+        const me = serverState.me;
         renderHeaderAndTabs();
-        renderPlayerTab();
-        renderStatusTab();
-        renderResultsTab();
-        renderAdminTab();
+        if (sectionChanged('player', [
+          serverState.phase,
+          me,
+          me ? serverState.groups[me.group].pool : serverState.groups
+        ])) {
+          renderPlayerTab();
+        }
+        if (sectionChanged('status', serverState.groups)) renderStatusTab();
+        if (sectionChanged('results', serverState.results || null)) renderResultsTab();
+        if (sectionChanged('admin', [
+          serverState.phase,
+          serverState.isAdmin,
+          serverState.groups,
+          serverState.summary,
+          serverState.storage || null
+        ])) {
+          renderAdminTab();
+        }
         switchTab(activeTab);
       }
 
       async function fetchState() {
-        const res = await apiRequest('/api/state', 'GET');
-        if (res.ok && res.data) {
-          applyServerState(res.data);
+        if (pollInFlight) return;
+        pollInFlight = true;
+        const epochAtStart = stateEpoch;
+        try {
+          const res = await apiRequest('/api/state', 'GET');
+          if (res.ok && res.data) {
+            if (res.real) setConnectionNotice('');
+            // Yoklama sürerken bir işlem daha yeni bir durum getirdiyse bu eski yanıtı yok say.
+            if (stateEpoch !== epochAtStart) return;
+            // Hiçbir şey değişmediyse ekranı yeniden çizme (dokunuşlar kaybolmasın).
+            if (JSON.stringify(res.data) === lastStateSig) return;
+            applyServerState(res.data, { real: res.real === true, fromPoll: true });
+          } else if (res.data && res.data.starting) {
+            setConnectionNotice('⏳ Sunucu açılıyor, kayıtlar yükleniyor… Birkaç saniye içinde hazır olacak.');
+            setTimeout(fetchState, 1200); // hazır olur olmaz göster
+
+          } else if (res.network) {
+            setConnectionNotice(
+              serverState
+                ? '⚠️ Sunucuya ulaşılamıyor (sunucu uykudaysa uyanması bir dakika kadar sürebilir). Bağlantı gelince sayfa kendiliğinden güncellenecek; bu sırada yaptığın işlemler kaydedilmez.'
+                : '⏳ Sunucuya bağlanılıyor… Sunucu uykudaysa uyanması bir dakika kadar sürebilir.'
+            );
+          } else {
+            setConnectionNotice('⚠️ Sunucu şu an yanıt veremiyor, tekrar deneniyor…');
+          }
+        } finally {
+          pollInFlight = false;
         }
       }
 
       // İlk yükleme ve 4 saniyede bir otomatik yoklama (polling)
       fetchState();
       setInterval(fetchState, 4000);
+      // Sekmeye geri dönüldüğünde beklemeden güncelle
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) fetchState();
+      });
     })();
   </script>
 </body>
